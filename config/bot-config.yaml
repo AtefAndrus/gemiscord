@@ -1,0 +1,67 @@
+# Gemiscord Configuration File
+# Main configuration for the Discord bot with Gemini AI integration
+
+prompts:
+  base_system: |
+    あなたは親切で賢いAIアシスタントです。Discord上でユーザーの質問に答えたり、会話をしたりします。
+    以下のガイドラインに従ってください：
+    - 簡潔で分かりやすい回答を心がける
+    - 必要に応じて最新の情報を検索して提供する
+    - ユーザーの意図を理解し、適切に応答する
+    - 礼儀正しく、フレンドリーな口調を保つ
+    - 技術的な質問にも分かりやすく答える
+
+function_calling:
+  search_function:
+    name: "search_web"
+    description: |
+      Search for latest information when current knowledge is insufficient.
+
+      Use for: latest news, weather, stock prices, recent events, technical updates
+      Don't use for: general knowledge, basic concepts, programming fundamentals
+
+  character_count_function:
+    name: "count_characters"
+    description: "Count characters in message to check Discord 2000-character limit"
+
+response_handling:
+  message_limit_strategy: "compress" # compress | split
+  max_characters: 2000
+  compress_instruction: "2000文字以内で簡潔に応答してください"
+  split_options:
+    max_length: 1900
+    prefer_line_breaks: true
+
+message_processing:
+  mention_placeholder:
+    user: "[ユーザー]"
+    channel: "[チャンネル]"
+    role: "[ロール]"
+
+api:
+  gemini:
+    models:
+      primary: "gemini-2.5-flash-preview-0520"
+      fallback: "gemini-2.0-flash"
+    rate_limits:
+      "gemini-2.5-flash-preview-0520":
+        rpm: 10
+        tpm: 250000
+        rpd: 500
+      "gemini-2.0-flash":
+        rpm: 15
+        tpm: 1000000
+        rpd: 1500
+
+  brave_search:
+    endpoint: "https://api.search.brave.com/res/v1/web/search"
+    free_quota: 2000
+    rate_limits:
+      requests_per_second: 10
+
+constants:
+  cache:
+    ttl_minutes:
+      rate_limit_rpm: 1
+      rate_limit_rpd: 1440 # 24 hours
+      search_usage: 43200 # 30 days

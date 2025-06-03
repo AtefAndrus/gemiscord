@@ -1,0 +1,35 @@
+# Gemiscord Development Configuration
+# Overrides for development environment
+
+prompts:
+  base_system: |
+    [開発環境] あなたは親切で賢いAIアシスタントです。Discord上でユーザーの質問に答えたり、会話をしたりします。
+    現在は開発環境で動作しています。
+    以下のガイドラインに従ってください：
+    - 簡潔で分かりやすい回答を心がける
+    - 必要に応じて最新の情報を検索して提供する
+    - ユーザーの意図を理解し、適切に応答する
+    - 礼儀正しく、フレンドリーな口調を保つ
+    - 技術的な質問にも分かりやすく答える
+    - デバッグ情報を含めることがある
+
+# Development-specific rate limits (more lenient)
+api:
+  gemini:
+    rate_limits:
+      "gemini-2.5-flash-preview-0520":
+        rpm: 5 # Lower for testing
+        tpm: 125000 # Half of production
+        rpd: 250 # Half of production
+      "gemini-2.0-flash":
+        rpm: 8 # Lower for testing
+        tpm: 500000 # Half of production
+        rpd: 750 # Half of production
+
+# Shorter cache TTLs for development
+constants:
+  cache:
+    ttl_minutes:
+      rate_limit_rpm: 0.5 # 30 seconds
+      rate_limit_rpd: 60 # 1 hour
+      search_usage: 1440 # 1 day

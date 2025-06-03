@@ -53,6 +53,7 @@ config/                      # 設定ファイル
 ### Phase 0 実装前に確認すべきドキュメント
 
 1. **TypeScript 公式ドキュメント**
+
    - [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
    - [Strict Mode 設定](https://www.typescriptlang.org/tsconfig#strict)
    - [Declaration Files](https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html)
@@ -65,23 +66,25 @@ config/                      # 設定ファイル
 ### Phase 1 実装前に確認すべきドキュメント
 
 1. **discord.js v14 ドキュメント**
+
    - [Guide](https://discordjs.guide/)
    - [API Reference](https://discord.js.org/docs/packages/discord.js/14.19.3)
    - [Intents and Partials](https://discordjs.guide/popular-topics/intents.html)
-   - [Message Content Intent](https://support-dev.discord.com/hc/en-us/articles/4404772028055-Message-Content-Intent-FAQ)
 
 2. **YAML ライブラリ**
+
    - [yaml npm package](https://www.npmjs.com/package/yaml)
    - [YAML Spec](https://yaml.org/spec/1.2.2/)
 
 3. **keyv ドキュメント**
-   - [keyv Documentation](https://github.com/jaredwray/keyv)
+   - [keyv Documentation](https://keyv.org/docs/)
    - [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/main/packages/sqlite)
    - [TTL Support](https://github.com/jaredwray/keyv#ttl)
 
 ### Phase 2 実装前に確認すべきドキュメント
 
 1. **Google Gemini API**
+
    - [Function Calling Guide](https://ai.google.dev/gemini-api/docs/function-calling)
    - [API Reference](https://ai.google.dev/api/rest)
    - [Model Information](https://ai.google.dev/gemini-api/docs/models/gemini)
@@ -89,30 +92,33 @@ config/                      # 設定ファイル
    - [File API](https://ai.google.dev/gemini-api/docs/vision)
 
 2. **Brave Search API**
+
    - [API Documentation](https://api.search.brave.com/app/documentation/web-search/get-started)
    - [Authentication](https://api.search.brave.com/app/documentation/web-search/authentication)
    - [Rate Limits and Pricing](https://brave.com/search/api/)
    - [Response Format](https://api.search.brave.com/app/documentation/web-search/responses)
 
 3. **@google/genai ライブラリ**
+   - [Official Documentation](https://googleapis.github.io/js-genai/release_docs/index.html)
    - [NPM Documentation](https://www.npmjs.com/package/@google/genai)
-   - [GitHub Repository](https://github.com/google/generative-ai-js)
-   - [TypeScript Types](https://github.com/google/generative-ai-js/tree/main/types)
+   - [Library GitHub](https://github.com/googleapis/js-genai)
 
 ### Phase 3 実装前に確認すべきドキュメント
 
 1. **Discord Slash Commands**
-   - [Slash Commands Guide](https://discordjs.guide/slash-commands/registering-slash-commands.html)
-   - [Interaction Handling](https://discordjs.guide/slash-commands/handling-interactions.html)
+
+   - [Slash Commands Hands-on](https://discordjs.guide/creating-your-bot/slash-commands.html)
+   - [Component interactions](https://discordjs.guide/message-components/interactions.html)
    - [Command Options](https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure)
 
 2. **File Handling**
    - [Discord.js Attachments](https://discord.js.org/docs/packages/discord.js/14.19.3/Attachment:Class)
-   - [Gemini File API](https://ai.google.dev/gemini-api/docs/vision#upload-image)
+   - [Gemini File API](https://ai.google.dev/gemini-api/docs/image-understanding#javascript)
 
 ### Phase 4 実装前に確認すべきドキュメント
 
 1. **Docker & Deployment**
+
    - [Docker Documentation](https://docs.docker.com/get-started/)
    - [Coolify Documentation](https://coolify.io/docs/)
    - [Bun Docker Image](https://hub.docker.com/r/oven/bun)
@@ -429,18 +435,50 @@ config/                      # 設定ファイル
 
 ### Phase 0 開始条件
 
-- [ ] 必須ドキュメントの確認完了
-  - [ ] TypeScript Handbook と Strict Mode
-  - [ ] Bun TypeScript サポート
-- [ ] 型定義の設計完了
-- [ ] インターフェース定義の合意
-- [ ] エラークラス階層の設計
-- [ ] ロギング方針の決定
+- [x] 必須ドキュメントの確認完了
+  - [x] TypeScript Handbook と Strict Mode
+  - [x] Bun TypeScript サポート
+- [x] 型定義の設計完了
+- [x] インターフェース定義の合意
+- [x] エラークラス階層の設計
+- [x] ロギング方針の決定
+
+## 完了したタスク
+
+### Phase 0: 基礎設計と型定義 ✅
+
+- ✅ 0-1. 型定義の作成（全 5 ファイル）
+- ✅ 0-2. インターフェース定義（services.ts, handlers.ts）
+- ✅ 0-3. エラークラスとロギング設定（errors.ts, logger.ts, constants.ts, sanitizer.ts）
+
+### Phase 1: コア基盤の実装 ✅
+
+- ✅ 1-1. 設定管理システム（YAML 設定ファイル、ConfigManager、ConfigService）
+- ✅ 1-2. 基本的な Discord ボット（bot.ts、ReadyHandler）
+- ✅ 1-3. メッセージサニタイゼーション（sanitizer.ts）
+- ✅ 1-4. 基本的なメッセージハンドリング（MessageCreateHandler、MessageProcessor）
+
+## 現在の状況
+
+- **完了フェーズ**: Phase 0 と Phase 1 が完了
+- **次のフェーズ**: Phase 2（Function Calling 統合）
+- **現在の課題**:
+  - 型エラーは残っているが、基本機能は動作可能
+  - Keyv の設定で sqlite アダプターが未設定だが、インメモリで動作
+  - Discord bot のテストが必要
 
 ## 次のステップ
 
-1. **Phase 0 の実装開始**: 型定義とインターフェースから始める
-2. **設定ファイルの作成**: bot-config.yaml のテンプレート作成
-3. **開発環境の最終確認**: Discord ボットの接続テスト
+1. **開発環境のテスト**: Discord ボットの接続テストを実施
+2. **Phase 2 の開始**: Gemini API クライアントの実装
+3. **継続的改善**: 型エラーの修正とコードの最適化
+
+## 軌道修正の必要性
+
+現在のところ、計画通りに進行しており、大きな軌道修正は不要です。ただし：
+
+1. **Keyv 設定の修正**: SQLite アダプターを正式に設定する必要があります
+2. **型定義の最適化**: discord.js との互換性を改善する必要があります
+3. **テスト環境の整備**: 実際の Discord サーバーでのテストが必要です
 
 この計画に従って実装を進めることで、手戻りを最小限に抑えながら、堅牢なシステムを構築できます。

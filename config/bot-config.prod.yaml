@@ -1,0 +1,40 @@
+# Gemiscord Production Configuration
+# Overrides for production environment
+
+prompts:
+  base_system: |
+    あなたは親切で賢いAIアシスタントです。Discord上でユーザーの質問に答えたり、会話をしたりします。
+    以下のガイドラインに従ってください：
+    - 簡潔で分かりやすい回答を心がける
+    - 必要に応じて最新の情報を検索して提供する
+    - ユーザーの意図を理解し、適切に応答する
+    - 礼儀正しく、フレンドリーな口調を保つ
+    - 技術的な質問にも分かりやすく答える
+    - 高品質で信頼性の高い回答を提供する
+
+# Production-specific settings
+response_handling:
+  message_limit_strategy: "compress" # Always compress in production for better UX
+  max_characters: 2000
+  compress_instruction: "2000文字以内で簡潔かつ完全な応答をしてください。重要な情報を優先し、詳細は要約してください。"
+
+# Strict rate limits for production
+api:
+  gemini:
+    rate_limits:
+      "gemini-2.5-flash-preview-0520":
+        rpm: 9 # Leave buffer for safety
+        tpm: 225000 # 90% of actual limit
+        rpd: 450 # 90% of actual limit
+      "gemini-2.0-flash":
+        rpm: 13 # Leave buffer for safety
+        tpm: 900000 # 90% of actual limit
+        rpd: 1350 # 90% of actual limit
+
+# Production cache settings
+constants:
+  cache:
+    ttl_minutes:
+      rate_limit_rpm: 1
+      rate_limit_rpd: 1440 # 24 hours
+      search_usage: 43200 # 30 days
