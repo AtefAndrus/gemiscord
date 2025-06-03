@@ -21,17 +21,20 @@ A Discord bot that integrates Google's Gemini API with Function Calling and Brav
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/AtefAndrus/gemiscord.git
 cd gemiscord
 ```
 
 2. Install dependencies:
+
 ```bash
 bun install
 ```
 
 3. Copy the environment variables template:
+
 ```bash
 cp .env.example .env
 ```
@@ -39,6 +42,7 @@ cp .env.example .env
 4. Configure your `.env` file with your API keys
 
 5. Run the bot:
+
 ```bash
 bun run src/bot.ts
 ```
@@ -62,6 +66,7 @@ See `config/bot-config.yaml` for available configuration options.
 ## Development
 
 This project uses:
+
 - **TypeScript** with strict mode
 - **discord.js** v14 for Discord API
 - **@google/genai** for Gemini API integration
