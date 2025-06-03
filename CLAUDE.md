@@ -220,8 +220,8 @@ DATABASE_URL=sqlite://config/bot.sqlite
    git init
    git add .
    git commit -m "Initial commit"
-   # Connect to GitHub repository (create one first)
-   git remote add origin https://github.com/YOUR_USERNAME/gemiscord.git
+   # Connect to GitHub repository
+   git remote add origin https://github.com/AtefAndrus/gemiscord.git
    git push -u origin main
    ```
 

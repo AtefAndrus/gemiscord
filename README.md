@@ -22,7 +22,7 @@ A Discord bot that integrates Google's Gemini API with Function Calling and Brav
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/gemiscord.git
+git clone https://github.com/AtefAndrus/gemiscord.git
 cd gemiscord
 ```
 
@@ -77,4 +77,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-For issues and feature requests, please use the [GitHub Issues](https://github.com/YOUR_USERNAME/gemiscord/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/AtefAndrus/gemiscord/issues) page.
