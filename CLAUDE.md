@@ -4,6 +4,23 @@
 
 A Discord bot that integrates Google's Gemini API with Function Calling and Brave Search API to provide intelligent conversational responses with seamless web search capabilities. The bot supports mention-based responses, channel-specific auto-responses, and sophisticated configuration management.
 
+## 重要: 実装手順について
+
+このプロジェクトの実装は、手戻りを防ぐために詳細に計画された `IMPLEMENTATION_PLAN.md` に従って進めてください。
+
+### 実装の進め方
+
+1. **必ず `IMPLEMENTATION_PLAN.md` を参照**: 各フェーズの実装前に計画を確認
+2. **公式ドキュメントの確認**: 各ライブラリの最新仕様を把握してから実装
+3. **依存関係の順守**: 各タスクの前提条件を満たしてから着手
+4. **テスト駆動**: 各フェーズ完了時に必ずテストを実施
+
+### 現在の進捗管理
+
+- TodoList ツールを使用して進捗を管理
+- 各フェーズの開始時に必ずドキュメントを確認
+- 完了したタスクは即座に completed にマーク
+
 ## Development Environment
 
 - **Version Management**: mise (for managing Bun and other tool versions)
@@ -578,6 +595,12 @@ const systemPrompt = await promptBuilder.buildSystemPrompt(
 - [Bun Documentation](https://bun.sh/docs)
 - [keyv Documentation](https://github.com/jaredwray/keyv)
 - [YAML Specification](https://yaml.org/spec/)
+
+## 開発時の必須参照
+
+1. **実装計画書**: `IMPLEMENTATION_PLAN.md` - 必ず最初に確認すること
+2. **作業管理**: TodoList ツールで現在のタスクを常に把握
+3. **ドキュメント**: 各フェーズの必須ドキュメントリストを確認してから実装開始
 
 ---
 
