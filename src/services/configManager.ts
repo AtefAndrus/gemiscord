@@ -1,11 +1,15 @@
 // YAML configuration management service
 
+import { Tool, Type } from "@google/genai";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { parse } from "yaml";
-import { Tool, Type } from "@google/genai";
 import { IConfigManager } from "../interfaces/services.js";
-import { MessageLimitStrategy, YAMLConfig, ModelConfig } from "../types/index.js";
+import {
+  MessageLimitStrategy,
+  ModelConfig,
+  YAMLConfig,
+} from "../types/index.js";
 import { ENV } from "../utils/constants.js";
 import { ConfigurationError } from "../utils/errors.js";
 import { configLogger as logger } from "../utils/logger.js";
@@ -206,45 +210,49 @@ export class ConfigManager implements IConfigManager {
   getSearchFunctionDeclaration(): Tool {
     const config = this.getConfig().function_calling.search_function;
     return {
-      functionDeclarations: [{
-        name: config.name,
-        description: config.description,
-        parameters: {
-          type: Type.OBJECT,
-          properties: {
-            query: {
-              type: Type.STRING,
-              description: "Search query with specific, effective keywords",
+      functionDeclarations: [
+        {
+          name: config.name,
+          description: config.description,
+          parameters: {
+            type: Type.OBJECT,
+            properties: {
+              query: {
+                type: Type.STRING,
+                description: "Search query with specific, effective keywords",
+              },
+              region: {
+                type: Type.STRING,
+                enum: ["JP", "US", "global"],
+                description: "Search region for localized results",
+              },
             },
-            region: {
-              type: Type.STRING,
-              enum: ["JP", "US", "global"],
-              description: "Search region for localized results",
-            },
+            required: ["query"],
           },
-          required: ["query"],
         },
-      }],
+      ],
     };
   }
 
   getCharacterCountFunctionDeclaration(): Tool {
     const config = this.getConfig().function_calling.character_count_function;
     return {
-      functionDeclarations: [{
-        name: config.name,
-        description: config.description,
-        parameters: {
-          type: Type.OBJECT,
-          properties: {
-            message: {
-              type: Type.STRING,
-              description: "Message to count characters for",
+      functionDeclarations: [
+        {
+          name: config.name,
+          description: config.description,
+          parameters: {
+            type: Type.OBJECT,
+            properties: {
+              message: {
+                type: Type.STRING,
+                description: "Message to count characters for",
+              },
             },
+            required: ["message"],
           },
-          required: ["message"],
         },
-      }],
+      ],
     };
   }
 

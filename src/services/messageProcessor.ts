@@ -44,7 +44,11 @@ export class MessageProcessor implements IMessageProcessor {
 
     // Check if channel type is allowed
     // Guild check above ensures channel is not DM/GroupDM
-    if (!ALLOWED_CHANNEL_TYPES.includes(message.channel.type as (typeof ALLOWED_CHANNEL_TYPES)[number])) {
+    if (
+      !ALLOWED_CHANNEL_TYPES.includes(
+        message.channel.type as (typeof ALLOWED_CHANNEL_TYPES)[number]
+      )
+    ) {
       throw new ValidationError("This channel type is not supported");
     }
 
@@ -88,7 +92,11 @@ export class MessageProcessor implements IMessageProcessor {
     attachment: Attachment
   ): Promise<ProcessedAttachment> {
     const contentType = attachment.contentType || "";
-    const isImage = !!contentType && GEMINI.SUPPORTED_IMAGE_TYPES.includes(contentType as (typeof GEMINI.SUPPORTED_IMAGE_TYPES)[number]);
+    const isImage =
+      !!contentType &&
+      GEMINI.SUPPORTED_IMAGE_TYPES.includes(
+        contentType as (typeof GEMINI.SUPPORTED_IMAGE_TYPES)[number]
+      );
     const isSupportedByGemini =
       isImage && attachment.size <= GEMINI.MAX_FILE_SIZE;
 
@@ -185,7 +193,11 @@ export class MessageProcessor implements IMessageProcessor {
 
     // Channel type check
     // Guild check above ensures channel is not DM/GroupDM
-    if (!ALLOWED_CHANNEL_TYPES.includes(message.channel.type as (typeof ALLOWED_CHANNEL_TYPES)[number])) {
+    if (
+      !ALLOWED_CHANNEL_TYPES.includes(
+        message.channel.type as (typeof ALLOWED_CHANNEL_TYPES)[number]
+      )
+    ) {
       logger.debug("Skipping unsupported channel type", {
         type: message.channel.type,
       });

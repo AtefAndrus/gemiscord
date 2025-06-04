@@ -139,7 +139,8 @@ export class MessageCreateHandler implements IMessageHandler {
   ): Promise<void> {
     try {
       // Show typing indicator
-      if (message.channel.type === 0) { // GUILD_TEXT channel
+      if (message.channel.type === 0) {
+        // GUILD_TEXT channel
         await message.channel.sendTyping();
       }
 

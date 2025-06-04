@@ -1,7 +1,7 @@
 // Dynamic configuration service using keyv
 
-import Keyv from "keyv";
 import KeyvSqlite from "@keyv/sqlite";
+import Keyv from "keyv";
 import { IConfigService } from "../interfaces/services.js";
 import {
   ChannelConfig,

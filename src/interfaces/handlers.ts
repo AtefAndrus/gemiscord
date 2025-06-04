@@ -1,17 +1,21 @@
 // Event handler interfaces
-import { ChatInputCommandInteraction, Message, SlashCommandBuilder } from "discord.js";
 import {
+  ChatInputCommandInteraction,
+  Message,
+  SlashCommandBuilder,
+} from "discord.js";
+import {
+  BotStatus,
+  ConfigValue,
   ExtendedClient,
   InteractionContext,
   MessageContext,
-  ReadyData,
-  BotStatus,
-  ModelRateLimitStatus,
-  SystemMetrics,
-  ConfigValue,
-  SearchResponse,
   ModelInfo,
+  ModelRateLimitStatus,
   ModelStats,
+  ReadyData,
+  SearchResponse,
+  SystemMetrics,
 } from "../types/index.js";
 
 // Base event handler interface
@@ -95,13 +99,23 @@ export interface IStatusCommandHandler extends ICommandHandler {
   getSystemMetrics(): Promise<SystemMetrics>;
 
   // Format status for display
-  formatStatus(status: { bot: BotStatus; rateLimit: ModelRateLimitStatus[]; system: SystemMetrics }, verbose: boolean): string;
+  formatStatus(
+    status: {
+      bot: BotStatus;
+      rateLimit: ModelRateLimitStatus[];
+      system: SystemMetrics;
+    },
+    verbose: boolean
+  ): string;
 }
 
 // Config command handler
 export interface IConfigCommandHandler extends ICommandHandler {
   // Get configuration
-  getConfig(key: string, context: InteractionContext): Promise<ConfigValue | null>;
+  getConfig(
+    key: string,
+    context: InteractionContext
+  ): Promise<ConfigValue | null>;
 
   // Set configuration
   setConfig(
@@ -147,10 +161,22 @@ export interface IModelCommandHandler extends ICommandHandler {
 // Error handler interface
 export interface IErrorHandler {
   // Handle different error types
-  handleError(error: Error, context?: InteractionContext | MessageContext): Promise<void>;
-  handleDiscordError(error: Error, context: InteractionContext | MessageContext): Promise<void>;
-  handleAPIError(error: Error, context: InteractionContext | MessageContext): Promise<void>;
-  handleValidationError(error: Error, context: InteractionContext | MessageContext): Promise<void>;
+  handleError(
+    error: Error,
+    context?: InteractionContext | MessageContext
+  ): Promise<void>;
+  handleDiscordError(
+    error: Error,
+    context: InteractionContext | MessageContext
+  ): Promise<void>;
+  handleAPIError(
+    error: Error,
+    context: InteractionContext | MessageContext
+  ): Promise<void>;
+  handleValidationError(
+    error: Error,
+    context: InteractionContext | MessageContext
+  ): Promise<void>;
 
   // Error recovery
   attemptRecovery(error: Error): Promise<boolean>;
@@ -168,8 +194,14 @@ export interface IMiddleware {
   before?(context: InteractionContext | MessageContext): Promise<boolean>;
 
   // Process after handler
-  after?(context: InteractionContext | MessageContext, result: unknown): Promise<void>;
+  after?(
+    context: InteractionContext | MessageContext,
+    result: unknown
+  ): Promise<void>;
 
   // Error handling
-  onError?(context: InteractionContext | MessageContext, error: Error): Promise<void>;
+  onError?(
+    context: InteractionContext | MessageContext,
+    error: Error
+  ): Promise<void>;
 }

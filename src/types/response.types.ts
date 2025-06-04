@@ -1,6 +1,6 @@
 // Response handling type definitions
 
-import { Message, Embed, Attachment, CommandInteraction } from "discord.js";
+import { Attachment, CommandInteraction, Embed, Message } from "discord.js";
 
 // Response processing types
 export interface ResponseContext {

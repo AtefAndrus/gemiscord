@@ -1,7 +1,7 @@
 // Discord-related type extensions and custom types
 import {
-  ChatInputCommandInteraction,
   ChannelType,
+  ChatInputCommandInteraction,
   Client,
   Collection,
   GuildMember,
@@ -14,7 +14,7 @@ import {
 export interface ExtendedClient extends Client {
   commands: Collection<string, Command>;
   // Make client.user non-nullable after ready event
-  user: Client['user'] & User;
+  user: Client["user"] & User;
 }
 
 // Slash command structure

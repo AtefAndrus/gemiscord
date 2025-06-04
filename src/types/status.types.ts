@@ -61,7 +61,12 @@ export interface ModelConfig {
   };
 }
 
-export type ConfigValue = string | number | boolean | string[] | Record<string, unknown>;
+export type ConfigValue =
+  | string
+  | number
+  | boolean
+  | string[]
+  | Record<string, unknown>;
 
 // Usage statistics
 export interface UsageStats {

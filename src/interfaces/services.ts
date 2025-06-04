@@ -1,6 +1,6 @@
 // Service layer interfaces
-import { Message, Attachment, TextChannel } from "discord.js";
-import { Tool, FunctionCall } from "@google/genai";
+import { FunctionCall, Tool } from "@google/genai";
+import { Attachment, Message, TextChannel } from "discord.js";
 import {
   ChannelConfig,
   GeminiFile,
@@ -10,17 +10,17 @@ import {
   LogLevel,
   MessageContext,
   MessageLimitStrategy,
+  ModelConfig,
   ModelRateLimitStatus,
   ProcessedAttachment,
+  RateLimitInfo,
   ResponseContext,
   SearchQuery,
   SearchResponse,
-  SplitResult,
-  YAMLConfig,
-  UsageStats,
   SplitOptions,
-  RateLimitInfo,
-  ModelConfig,
+  SplitResult,
+  UsageStats,
+  YAMLConfig,
 } from "../types/index.js";
 
 // Configuration management interfaces
@@ -94,7 +94,10 @@ export interface IGeminiService {
   switchModel(model: string): void;
 
   // Function calling
-  executeFunction(name: string, args: Record<string, unknown>): Promise<unknown>;
+  executeFunction(
+    name: string,
+    args: Record<string, unknown>
+  ): Promise<unknown>;
 }
 
 export interface ISearchService {
@@ -173,7 +176,10 @@ export interface IResponseManager {
   formatForDiscord(content: string): string;
 
   // Send response
-  sendResponse(channel: TextChannel, responseContext: ResponseContext): Promise<void>;
+  sendResponse(
+    channel: TextChannel,
+    responseContext: ResponseContext
+  ): Promise<void>;
 }
 
 export interface IPromptBuilder {

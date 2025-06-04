@@ -91,7 +91,11 @@ export class Logger implements ILogger {
     return `${timestamp}${levelStr} ${prefixStr}`;
   }
 
-  private formatMessage(level: LogLevel, message: string, args: unknown[]): string {
+  private formatMessage(
+    level: LogLevel,
+    message: string,
+    args: unknown[]
+  ): string {
     const prefix = this.formatPrefix(level);
     const formattedArgs = args.map((arg) => {
       if (typeof arg === "object") {
@@ -118,7 +122,9 @@ export class Logger implements ILogger {
         name: error.name,
         message: error.message,
         stack: error.stack?.split("\n").slice(0, 5).join("\n"), // Limit stack trace
-        ...("details" in error && typeof error.details === "object" ? error.details : {}),
+        ...("details" in error && typeof error.details === "object"
+          ? error.details
+          : {}),
       };
       return "\n" + JSON.stringify(errorInfo, null, 2);
     }
