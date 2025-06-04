@@ -110,10 +110,6 @@ export type {
   ModelStats,
   ModelConfig,
   ConfigValue,
-} from "./status.types.js";
-
-// Stats types
-export type {
   UsageStats,
   RateLimitInfo,
-} from "./stats.types.js";
+} from "./status.types.js";

@@ -10,7 +10,10 @@ import {
   ToolConfig,
 } from "@google/genai";
 
-// Function declaration type (for building Tool objects)
+// Import official types when needed (currently available but unused)
+// import { FunctionDeclaration, Schema, FunctionCallingConfigMode } from "@google/genai";
+
+// TODO: Replace custom FunctionDeclaration with official type when implementing function calling
 export interface FunctionDeclaration {
   name: string;
   description: string;
