@@ -93,10 +93,10 @@ config/                      # 設定ファイル
 
 2. **Brave Search API**
 
-   - [API Documentation](https://api.search.brave.com/app/documentation/web-search/get-started)
-   - [Authentication](https://api.search.brave.com/app/documentation/web-search/authentication)
-   - [Rate Limits and Pricing](https://brave.com/search/api/)
-   - [Response Format](https://api.search.brave.com/app/documentation/web-search/responses)
+   - [API Documentation](https://api-dashboard.search.brave.com/app/documentation/web-search/get-started)
+   - [Request Header](https://api-dashboard.search.brave.com/app/documentation/web-search/request-headers)
+   - [Rate Limits and Pricing](https://api-dashboard.search.brave.com/app/subscriptions/subscribe?tab=ai)
+   - [Response Format](https://api-dashboard.search.brave.com/app/documentation/web-search/responses)
 
 3. **@google/genai ライブラリ**
    - [Official Documentation](https://googleapis.github.io/js-genai/release_docs/index.html)
