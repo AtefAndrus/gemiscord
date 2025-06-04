@@ -458,27 +458,669 @@ config/                      # 設定ファイル
 - ✅ 1-3. メッセージサニタイゼーション（sanitizer.ts）
 - ✅ 1-4. 基本的なメッセージハンドリング（MessageCreateHandler、MessageProcessor）
 
-## 現在の状況
+## 現在の状況 (最新更新: 2025 年 6 月 4 日)
 
-- **完了フェーズ**: Phase 0 と Phase 1 が完了
-- **次のフェーズ**: Phase 2（Function Calling 統合）
-- **現在の課題**:
-  - 型エラーは残っているが、基本機能は動作可能
-  - Keyv の設定で sqlite アダプターが未設定だが、インメモリで動作
-  - Discord bot のテストが必要
+### ✅ **完了フェーズ**: Phase 0-1 (基盤構築)
 
-## 次のステップ
+- **型定義**: 全 TypeScript 型とインターフェース定義完了
+- **設定管理**: YAML + keyv 設定システム稼働
+- **Discord 基盤**: bot.ts、メッセージハンドラー、sanitization 完了
+- **ユーティリティ**: ロギング、エラー処理、定数管理完了
 
-1. **開発環境のテスト**: Discord ボットの接続テストを実施
-2. **Phase 2 の開始**: Gemini API クライアントの実装
-3. **継続的改善**: 型エラーの修正とコードの最適化
+### 🚧 **次のフェーズ**: Phase 2 (Function Calling 統合) - **最優先**
 
-## 軌道修正の必要性
+- **未実装**: Gemini API client, Brave Search, rate limiting
+- **現在**: messageCreate.ts:154 でダミーレスポンス
+- **準備完了**: 全基盤コンポーネントが AI 統合に対応済み
 
-現在のところ、計画通りに進行しており、大きな軌道修正は不要です。ただし：
+### 📋 **Phase 2 優先タスク**
 
-1. **Keyv 設定の修正**: SQLite アダプターを正式に設定する必要があります
-2. **型定義の最適化**: discord.js との互換性を改善する必要があります
-3. **テスト環境の整備**: 実際の Discord サーバーでのテストが必要です
+1. `src/services/gemini.ts` - Gemini API + Function Calling
+2. `src/services/braveSearch.ts` - Brave Search API 統合
+3. `src/services/rateLimit.ts` - レート制限・モデル切替
+4. messageCreate.ts の AI 統合 (ダミー削除)
+5. 実環境テスト (Discord サーバー + 全 API)
 
-この計画に従って実装を進めることで、手戻りを最小限に抑えながら、堅牢なシステムを構築できます。
+### ⚠️ **注意事項**
+
+- Keyv SQLite 設定は動作中 (configService.ts:19-22 で正常設定済み)
+- 型エラーなし、基本機能動作確認済み
+- Phase 2 実装前に必ず公式ドキュメント確認必須
+
+---
+
+**進捗管理**: TodoWrite ツールで各タスクを追跡
+**実装方針**: Phase 2 → Phase 3 (コマンド) → Phase 4 (本番デプロイ)
+**軌道修正**: 計画通り進行中、大きな変更不要
+
+---
+
+# 詳細テスト戦略 - Phase 2 実装
+
+## テスト駆動開発アプローチ
+
+### 基本方針
+
+1. **テストファースト**: 各機能実装前にテストケースを作成
+2. **段階的テスト**: 単体 → 結合 → E2E の順序で実施
+3. **継続的検証**: 各ステップ完了時に必ずテスト実行
+4. **モック活用**: 外部 API 依存を排除したテスト設計
+
+### テスト環境セットアップ
+
+```bash
+# テストフレームワークのインストール
+bun add --dev @types/jest jest ts-jest
+bun add --dev supertest @types/supertest  # HTTP API テスト用
+
+# Jest設定 (jest.config.js)
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
+  coverageThreshold: {
+    global: { branches: 80, functions: 80, lines: 80, statements: 80 }
+  }
+};
+```
+
+## Phase 2 詳細実装・テスト計画
+
+### 2-1. Gemini API クライアント実装
+
+#### Step 2-1-1: 基本インターフェース実装
+
+**実装内容**: `src/services/gemini.ts` の骨組み作成
+
+**単体テスト**: `tests/unit/services/gemini.test.ts`
+
+```typescript
+import { GeminiService } from "../../../src/services/gemini";
+import { ConfigManager } from "../../../src/services/configManager";
+
+describe("GeminiService", () => {
+  let geminiService: GeminiService;
+  let mockConfigManager: jest.Mocked<ConfigManager>;
+
+  beforeEach(() => {
+    mockConfigManager = {
+      getSearchFunctionDeclaration: jest.fn(),
+      getCharacterCountFunctionDeclaration: jest.fn(),
+      getModelConfig: jest.fn(),
+    } as any;
+
+    geminiService = new GeminiService(mockConfigManager);
+  });
+
+  describe("constructor", () => {
+    it("should initialize with config manager", () => {
+      expect(geminiService).toBeInstanceOf(GeminiService);
+    });
+
+    it("should throw error without API key", () => {
+      delete process.env.GEMINI_API_KEY;
+      expect(() => new GeminiService(mockConfigManager)).toThrow(
+        "GEMINI_API_KEY is not set"
+      );
+    });
+  });
+
+  describe("buildFunctionDeclarations", () => {
+    it("should return character count function when search disabled", async () => {
+      mockConfigManager.getCharacterCountFunctionDeclaration.mockReturnValue({
+        functionDeclarations: [{ name: "count_characters" }],
+      });
+
+      const result = await geminiService.buildFunctionDeclarations(false);
+      expect(result).toHaveLength(1);
+      expect(result[0].functionDeclarations[0].name).toBe("count_characters");
+    });
+
+    it("should include search function when enabled", async () => {
+      mockConfigManager.getSearchFunctionDeclaration.mockReturnValue({
+        functionDeclarations: [{ name: "search_web" }],
+      });
+      mockConfigManager.getCharacterCountFunctionDeclaration.mockReturnValue({
+        functionDeclarations: [{ name: "count_characters" }],
+      });
+
+      const result = await geminiService.buildFunctionDeclarations(true);
+      expect(result).toHaveLength(2);
+    });
+  });
+});
+```
+
+**テスト実行**: `bun test tests/unit/services/gemini.test.ts`
+
+#### Step 2-1-2: Function Calling 実装
+
+**実装内容**: Function Calling のコア機能
+
+**単体テスト**: Function Calling レスポンス処理
+
+```typescript
+describe("generateContent", () => {
+  it("should handle function calling response", async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              { functionCall: { name: "search_web", args: { query: "test" } } },
+            ],
+          },
+        },
+      ],
+    };
+
+    jest.spyOn(geminiService, "callGeminiAPI").mockResolvedValue(mockResponse);
+
+    const result = await geminiService.generateContent(
+      "test message",
+      [],
+      "gemini-2.0-flash"
+    );
+
+    expect(result.requiresFunctionCall).toBe(true);
+    expect(result.functionCall?.name).toBe("search_web");
+  });
+
+  it("should handle text response without function call", async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: { parts: [{ text: "Direct response" }] },
+        },
+      ],
+    };
+
+    jest.spyOn(geminiService, "callGeminiAPI").mockResolvedValue(mockResponse);
+
+    const result = await geminiService.generateContent(
+      "test message",
+      [],
+      "gemini-2.0-flash"
+    );
+
+    expect(result.requiresFunctionCall).toBe(false);
+    expect(result.content).toBe("Direct response");
+  });
+});
+```
+
+#### Step 2-1-3: エラーハンドリング実装
+
+**実装内容**: レート制限、タイムアウト等の処理
+
+**単体テスト**: エラーハンドリング
+
+```typescript
+describe("error handling", () => {
+  it("should handle rate limit error (429)", async () => {
+    const rateLimitError = new Error("Rate limit exceeded");
+    rateLimitError.status = 429;
+
+    jest
+      .spyOn(geminiService, "callGeminiAPI")
+      .mockRejectedValue(rateLimitError);
+
+    await expect(
+      geminiService.generateContent("test", [], "gemini-2.0-flash")
+    ).rejects.toThrow("Rate limit exceeded");
+  });
+
+  it("should handle timeout error", async () => {
+    jest
+      .spyOn(geminiService, "callGeminiAPI")
+      .mockRejectedValue(new Error("Timeout"));
+
+    await expect(
+      geminiService.generateContent("test", [], "gemini-2.0-flash")
+    ).rejects.toThrow("Timeout");
+  });
+});
+```
+
+#### Step 2-1-4: 結合テスト
+
+**テスト内容**: 実際の Gemini API との統合（モック使用）
+
+**結合テスト**: `tests/integration/gemini-integration.test.ts`
+
+```typescript
+import { GeminiService } from "../../src/services/gemini";
+import { ConfigManager } from "../../src/services/configManager";
+
+describe("Gemini Integration Tests", () => {
+  let geminiService: GeminiService;
+  let configManager: ConfigManager;
+
+  beforeAll(async () => {
+    // テスト用の設定ファイルを使用
+    configManager = new ConfigManager("tests/fixtures/config");
+    await configManager.loadConfig();
+
+    geminiService = new GeminiService(configManager);
+  });
+
+  it("should generate response with mocked API", async () => {
+    // APIレスポンスをモック
+    const mockApiResponse = {
+      candidates: [
+        {
+          content: { parts: [{ text: "Hello, this is a test response!" }] },
+        },
+      ],
+    };
+
+    jest
+      .spyOn(geminiService, "callGeminiAPI")
+      .mockResolvedValue(mockApiResponse);
+
+    const result = await geminiService.generateContent(
+      "Hello, how are you?",
+      [],
+      "gemini-2.0-flash"
+    );
+
+    expect(result.content).toBe("Hello, this is a test response!");
+    expect(result.requiresFunctionCall).toBe(false);
+  });
+
+  it("should trigger function calling for search queries", async () => {
+    const mockApiResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                functionCall: {
+                  name: "search_web",
+                  args: { query: "latest news", region: "JP" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    jest
+      .spyOn(geminiService, "callGeminiAPI")
+      .mockResolvedValue(mockApiResponse);
+
+    const result = await geminiService.generateContent(
+      "What is the latest news today?",
+      [],
+      "gemini-2.0-flash"
+    );
+
+    expect(result.requiresFunctionCall).toBe(true);
+    expect(result.functionCall?.name).toBe("search_web");
+    expect(result.functionCall?.args.query).toBe("latest news");
+  });
+});
+```
+
+### 2-2. Brave Search API 統合
+
+#### Step 2-2-1: 基本 API クライアント実装
+
+**実装内容**: `src/services/braveSearch.ts` の基本構造
+
+**単体テスト**: `tests/unit/services/braveSearch.test.ts`
+
+```typescript
+import { BraveSearchService } from "../../../src/services/braveSearch";
+
+describe("BraveSearchService", () => {
+  let searchService: BraveSearchService;
+
+  beforeEach(() => {
+    process.env.BRAVE_SEARCH_API_KEY = "test-api-key";
+    searchService = new BraveSearchService();
+  });
+
+  describe("constructor", () => {
+    it("should initialize with API key", () => {
+      expect(searchService).toBeInstanceOf(BraveSearchService);
+    });
+
+    it("should throw error without API key", () => {
+      delete process.env.BRAVE_SEARCH_API_KEY;
+      expect(() => new BraveSearchService()).toThrow(
+        "BRAVE_SEARCH_API_KEY is not set"
+      );
+    });
+  });
+
+  describe("search", () => {
+    it("should format search query correctly", async () => {
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            web: {
+              results: [
+                {
+                  title: "Test",
+                  url: "http://test.com",
+                  snippet: "Test snippet",
+                },
+              ],
+            },
+          }),
+      });
+      global.fetch = mockFetch;
+
+      await searchService.search("test query", "JP");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("q=test%20query"),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-Subscription-Token": "test-api-key",
+          }),
+        })
+      );
+    });
+
+    it("should handle search results correctly", async () => {
+      const mockResults = {
+        web: {
+          results: [
+            {
+              title: "Test 1",
+              url: "http://test1.com",
+              snippet: "First result",
+            },
+            {
+              title: "Test 2",
+              url: "http://test2.com",
+              snippet: "Second result",
+            },
+          ],
+        },
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResults),
+      });
+
+      const result = await searchService.search("test query");
+
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].title).toBe("Test 1");
+      expect(result.query).toBe("test query");
+    });
+  });
+});
+```
+
+#### Step 2-2-2: エラーハンドリング・レート制限
+
+**実装内容**: API 制限とエラー処理
+
+**単体テスト**: エラーハンドリング
+
+```typescript
+describe("error handling", () => {
+  it("should handle API error responses", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      statusText: "Too Many Requests",
+    });
+
+    await expect(searchService.search("test query")).rejects.toThrow(
+      "Brave Search API error: 429 Too Many Requests"
+    );
+  });
+
+  it("should handle network errors", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error("Network error"));
+
+    await expect(searchService.search("test query")).rejects.toThrow(
+      "Network error"
+    );
+  });
+});
+```
+
+### 2-3. Rate Limit Service 実装
+
+#### Step 2-3-1: 基本レート制限実装
+
+**実装内容**: `src/services/rateLimit.ts` の基本構造
+
+**単体テスト**: `tests/unit/services/rateLimit.test.ts`
+
+```typescript
+import { RateLimitService } from "../../../src/services/rateLimit";
+import { ConfigService } from "../../../src/services/config";
+
+describe("RateLimitService", () => {
+  let rateLimitService: RateLimitService;
+  let mockConfigService: jest.Mocked<ConfigService>;
+
+  beforeEach(() => {
+    mockConfigService = {
+      keyv: {
+        get: jest.fn(),
+        set: jest.fn(),
+      },
+    } as any;
+
+    rateLimitService = new RateLimitService(mockConfigService);
+  });
+
+  describe("checkModelLimits", () => {
+    it("should return true when under limits", async () => {
+      mockConfigService.keyv.get.mockResolvedValue(5); // Current: 5 RPM
+
+      const result = await rateLimitService.checkModelLimits(
+        "gemini-2.0-flash",
+        "rpm"
+      );
+
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBeGreaterThan(0);
+    });
+
+    it("should return false when at limit", async () => {
+      mockConfigService.keyv.get.mockResolvedValue(15); // At RPM limit
+
+      const result = await rateLimitService.checkModelLimits(
+        "gemini-2.0-flash",
+        "rpm"
+      );
+
+      expect(result.allowed).toBe(false);
+      expect(result.remaining).toBe(0);
+    });
+  });
+
+  describe("updateCounters", () => {
+    it("should increment counters correctly", async () => {
+      mockConfigService.keyv.get.mockResolvedValue(5);
+      mockConfigService.keyv.set.mockResolvedValue(true);
+
+      await rateLimitService.updateCounters("gemini-2.0-flash", {
+        promptTokens: 100,
+        completionTokens: 50,
+      });
+
+      expect(mockConfigService.keyv.set).toHaveBeenCalledWith(
+        expect.stringContaining("rpm"),
+        6,
+        60000 // 1 minute TTL
+      );
+    });
+  });
+});
+```
+
+#### Step 2-3-2: モデル切り替えロジック
+
+**実装内容**: 自動フォールバック機能
+
+**単体テスト**: モデル切り替え
+
+```typescript
+describe("getAvailableModel", () => {
+  it("should return primary model when available", async () => {
+    jest
+      .spyOn(rateLimitService, "checkModelLimits")
+      .mockResolvedValue({ allowed: true, remaining: 5 });
+
+    const model = await rateLimitService.getAvailableModel();
+
+    expect(model).toBe("gemini-2.5-flash-preview-0520");
+  });
+
+  it("should fallback to secondary model when primary limited", async () => {
+    jest
+      .spyOn(rateLimitService, "checkModelLimits")
+      .mockResolvedValueOnce({ allowed: false, remaining: 0 }) // Primary
+      .mockResolvedValueOnce({ allowed: true, remaining: 10 }); // Fallback
+
+    const model = await rateLimitService.getAvailableModel();
+
+    expect(model).toBe("gemini-2.0-flash");
+  });
+
+  it("should throw error when all models limited", async () => {
+    jest
+      .spyOn(rateLimitService, "checkModelLimits")
+      .mockResolvedValue({ allowed: false, remaining: 0 });
+
+    await expect(rateLimitService.getAvailableModel()).rejects.toThrow(
+      "All models are rate limited"
+    );
+  });
+});
+```
+
+### 2-4. 統合結合テスト
+
+#### E2E テスト: 完全なメッセージフロー
+
+**テスト内容**: Discord メッセージから AI 応答まで
+
+**結合テスト**: `tests/integration/message-flow.test.ts`
+
+```typescript
+import { MessageCreateHandler } from "../../src/handlers/messageCreate";
+import { GeminiService } from "../../src/services/gemini";
+import { BraveSearchService } from "../../src/services/braveSearch";
+import { RateLimitService } from "../../src/services/rateLimit";
+
+describe("Complete Message Flow Integration", () => {
+  let handler: MessageCreateHandler;
+  let mockMessage: any;
+
+  beforeEach(() => {
+    // モックメッセージオブジェクト作成
+    mockMessage = {
+      content: "What is the weather today?",
+      author: { bot: false, id: "user123" },
+      guild: { id: "guild123" },
+      channel: { id: "channel123", sendTyping: jest.fn() },
+      mentions: { users: new Map([["bot123", {}]]) },
+      reply: jest.fn(),
+    };
+
+    handler = new MessageCreateHandler();
+  });
+
+  it("should process message with search function call", async () => {
+    // Gemini が検索を要求するレスポンスをモック
+    const mockGeminiResponse = {
+      requiresFunctionCall: true,
+      functionCall: { name: "search_web", args: { query: "weather today" } },
+    };
+
+    // 検索結果をモック
+    const mockSearchResults = {
+      query: "weather today",
+      results: [{ title: "Weather", snippet: "Sunny 25°C" }],
+    };
+
+    // 最終的なGeminiレスポンスをモック
+    const mockFinalResponse = {
+      requiresFunctionCall: false,
+      content: "今日の天気は晴れで25度です。",
+    };
+
+    jest
+      .spyOn(GeminiService.prototype, "generateContent")
+      .mockResolvedValueOnce(mockGeminiResponse)
+      .mockResolvedValueOnce(mockFinalResponse);
+
+    jest
+      .spyOn(BraveSearchService.prototype, "search")
+      .mockResolvedValue(mockSearchResults);
+
+    jest
+      .spyOn(RateLimitService.prototype, "getAvailableModel")
+      .mockResolvedValue("gemini-2.0-flash");
+
+    await handler.execute({} as any, mockMessage);
+
+    expect(mockMessage.reply).toHaveBeenCalledWith({
+      content: "今日の天気は晴れで25度です。",
+      allowedMentions: { repliedUser: true },
+    });
+  });
+
+  it("should handle rate limit fallback", async () => {
+    jest
+      .spyOn(RateLimitService.prototype, "getAvailableModel")
+      .mockRejectedValue(new Error("All models are rate limited"));
+
+    await handler.execute({} as any, mockMessage);
+
+    expect(mockMessage.reply).toHaveBeenCalledWith(
+      expect.stringContaining("現在利用量が上限に達しています")
+    );
+  });
+});
+```
+
+## テスト実行スケジュール
+
+### 各ステップでの必須テスト
+
+1. **実装前**: 該当単体テストを作成し、fail することを確認
+2. **実装中**: テストが pass するまで実装を継続
+3. **実装後**: 結合テストを実行し、他機能への影響確認
+4. **統合前**: 全テストスイートを実行し、品質確認
+
+### 継続的テスト実行
+
+```bash
+# 監視モードでテスト実行
+bun test --watch
+
+# カバレッジ付きテスト実行
+bun test --coverage
+
+# 特定のテストファイルのみ実行
+bun test tests/unit/services/gemini.test.ts
+
+# 結合テストのみ実行
+bun test tests/integration/
+```
+
+### テスト品質基準
+
+- **単体テスト**: カバレッジ 80% 以上
+- **結合テスト**: 主要フロー 100% カバー
+- **E2E テスト**: ユーザーシナリオ 100% カバー
+- **実行時間**: 全テスト 30 秒以内
+
+この詳細なテスト戦略により、各実装ステップで確実に品質を確保しながら進めることができます。

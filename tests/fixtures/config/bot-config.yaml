@@ -1,0 +1,52 @@
+# Test configuration file
+prompts:
+  base_system: |
+    Test system prompt for unit testing.
+    You are a helpful assistant in test mode.
+
+function_calling:
+  search_function:
+    name: "search_web"
+    description: "Test search function description"
+
+  character_count_function:
+    name: "count_characters"
+    description: "Test character count function"
+
+response_handling:
+  message_limit_strategy: "compress"
+  max_characters: 2000
+  compress_instruction: "Test compression instruction"
+  split_options:
+    max_length: 1900
+    prefer_line_breaks: true
+
+message_processing:
+  mention_placeholder:
+    user: "[テストユーザー]"
+    channel: "[テストチャンネル]"
+    role: "[テストロール]"
+
+api:
+  gemini:
+    models:
+      primary: "gemini-2.0-flash"
+      fallback: "gemini-2.0-flash"
+    rate_limits:
+      "gemini-2.0-flash":
+        rpm: 15
+        tpm: 1000000
+        rpd: 1500
+
+  brave_search:
+    endpoint: "https://api.search.brave.com/res/v1/web/search"
+    free_quota: 2000
+    rate_limits:
+      requests_per_second: 10
+
+constants:
+  cache:
+    ttl_minutes:
+      rate_limit_rpm: 1
+      rate_limit_rpd: 1440
+      search_usage: 43200

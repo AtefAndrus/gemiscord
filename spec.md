@@ -1,409 +1,49 @@
-# Gemini Discord Bot 最終仕様書 v4.0
+# Gemini Discord Bot 仕様書 v5.0
 
-## 🎯 プロジェクト概要
+## 概要
 
-Gemini API の Function Calling 機能と Brave Search API を統合し、Discord で高度な会話と検索機能を提供するボット。プレースホルダベースの安全な処理と柔軟な応答管理を特徴とする。
+Discord で Gemini API (Function Calling) + Brave Search API を統合した AI ボット
 
-## 🏗️ 技術スタック
+## 技術スタック
 
-### **ランタイム・言語**
+**Runtime**: Bun 1.2.15 + TypeScript strict
+**Discord**: discord.js v14.19.3
+**AI**: @google/genai (Function Calling), Brave Search API
+**Storage**: YAML (static config) + keyv/sqlite (dynamic config)
+**Deploy**: Coolify (Docker)
 
-- **Bun 1.2.15**: 最新安定版 JavaScript/TypeScript ランタイム
-- **TypeScript**: 型安全性とコード品質確保（strict mode）
+## 実装状況
 
-### **主要ライブラリ**
+**✅ Phase 0-1 完了**: TypeScript 型定義、Discord 基盤、設定管理、メッセージ処理
+**🚧 Phase 2 次**: Gemini API、Brave Search、Function Calling、レート制限
+**⏳ Phase 3-4**: コマンド、ファイル処理、本番デプロイ
 
-- **discord.js 14.19.3**: Discord API 操作
-- **@google/genai**: Gemini API 統合（Function Calling 対応）
-- **keyv + @keyv/sqlite**: 動的設定・使用量管理
-- **yaml**: 設定ファイル管理
+## 動作仕様
 
-### **デプロイ環境**
+**応答モード**: `@bot メッセージ` + 指定チャンネル自動応答
+**Function Calling**: Gemini が検索必要性を自動判断、シームレス統合
+**レート制限**: gemini-2.5-flash (10 RPM) → gemini-2.0-flash 自動切替
+**検索制限**: Brave Search 月 2,000 クエリ無料、超過時は検索無効化
 
-- **Coolify**: オープンソース PaaS（Docker）
+## メッセージ処理
 
-## 🤖 ボット動作仕様
+**セキュリティ**: `<@123>` → `[ユーザー]` プレースホルダ化 (実装済)
+**文字制限**: 圧縮モード (2000 文字以内) / 分割モード (複数メッセージ)
+**プロンプト階層**: YAML ベース + サーバー/チャンネル別カスタム
+**ファイル対応**: Phase 3 で画像処理予定
 
-### **応答モード**
+## API 制限
 
-1. **メンション応答**
+| Model                         | RPM | TPM  | RPD  | Status         |
+| ----------------------------- | --- | ---- | ---- | -------------- |
+| gemini-2.5-flash-preview-0520 | 10  | 250K | 500  | 優先           |
+| gemini-2.0-flash              | 15  | 1M   | 1500 | フォールバック |
 
-   - `@botname メッセージ` 形式で応答
-   - 全サーバー・全チャンネルで有効
-   - サーバー別で ON/OFF 切り替え可能
+**Brave Search**: 月 2,000 クエリ無料、$3/1,000 追加
+**制御**: keyv + TTL でローカル追跡、80%到達で自動モデル切替
 
-2. **特定チャンネル応答**
-   - 指定チャンネルでの全発言（Bot 以外）に応答
-   - チャンネル単位で個別設定可能
-   - サーバー管理者が追加/削除可能
+## 予定機能 (Phase 3+)
 
-### **応答除外条件**
-
-- Bot 自身の発言は無視
-- 他の Bot の発言は無視
-
-## 🔍 検索機能（Function Calling + Brave Search API）
-
-### **技術概要**
-
-- **Function Calling 統合**: Gemini API が検索必要性を自動判断
-- **シームレス検索**: 検索結果が自然に応答に統合
-- **高精度判定**: モデルの文脈理解力で最適な検索実行
-- **コスト効率**: 月 2,000 クエリ無料、追加$3/1,000 クエリ
-- **動的制御**: レートリミット時は検索機能を自動無効化
-
-### **対応モデル（Function Calling 必須）**
-
-- **gemini-2.5-flash-preview-0520**: 優先モデル（10 RPM, 250K TPM, 500 RPD）
-- **gemini-2.0-flash**: フォールバックモデル（15 RPM, 1M TPM, 1,500 RPD）
-
-### **検索関数仕様**
-
-- **検索実行**: `search_web` - 最新情報やリアルタイムデータ取得
-- **文字数管理**: `count_characters` - Discord 2000 文字制限チェック
-- **適応制御**: レートリミット状況に応じた機能有効/無効切り替え
-
-## 💬 メッセージ処理システム
-
-### **セキュリティ処理（プレースホルダ化）**
-
-- **ユーザーメンション**: `<@123456789>` → `[ユーザー]`
-- **チャンネルメンション**: `<#123456789>` → `[チャンネル]`
-- **ロールメンション**: `<@&123456789>` → `[ロール]`
-- **カスタム絵文字**: `<:name:123456789>` → `:name:`
-- **プロンプトインジェクション対策**: 悪意あるパターンの検知
-
-### **応答長制御システム**
-
-#### **デフォルト動作: 圧縮モード**
-
-- **制限**: 2000 文字以内での応答生成
-- **指示**: Gemini に「2000 文字以内で簡潔に応答してください」を自動付与
-- **利点**: 単一メッセージでの完結した応答
-
-#### **設定変更: 分割モード**
-
-- **分割送信**: 2000 文字超過時の複数メッセージ分割
-- **優先設定**: 改行位置での分割を優先（1900 文字制限でバッファ確保）
-- **設定**: サーバー管理者が`/config response split`で変更可能
-
-### **添付ファイル処理**
-
-#### **Phase 1: 画像対応**
-
-- **対応形式**: JPG, PNG, GIF, WebP
-- **制限**: 最大 3000 ファイル/リクエスト（Gemini 制限）
-- **処理**: discord.js attachments → Gemini File API
-
-#### **Phase 2 以降: 拡張対応**
-
-- **文書**: PDF, TXT, MD, CSV（File API 経由）
-- **動画**: MP4, MOV, AVI, WebM（最大 2GB）
-- **音声**: MP3, WAV, FLAC, AAC
-
-## 🎯 プロンプト管理システム
-
-### **階層構造**
-
-1. **固定ベースプロンプト**: YAML 設定ファイルで管理
-2. **サーバー別カスタム**: 管理者が設定可能
-3. **チャンネル別カスタム**: チャンネル固有の指示
-4. **一時的指示**: 特定応答向けの動的指示
-
-### **設定ファイル管理**
-
-- **メイン設定**: `config/bot-config.yaml`
-- **環境別設定**: `bot-config.dev.yaml`, `bot-config.prod.yaml`
-- **Hot Reload**: 実行時設定変更対応
-- **バージョン管理**: Git 管理による変更履歴
-
-## ⚡ レートリミット管理
-
-### **対象 API 制限値**
-
-#### **Gemini API（Free ティア）**
-
-| Model                         | RPM | TPM  | RPD   | Function Calling |
-| ----------------------------- | --- | ---- | ----- | ---------------- |
-| gemini-2.5-flash-preview-0520 | 10  | 250K | 500   | ✅               |
-| gemini-2.0-flash              | 15  | 1M   | 1,500 | ✅               |
-
-#### **Brave Search API**
-
-- **無料プラン**: 月 2,000 クエリ、1 秒 1 クエリ
-- **有料プラン**: $3/1,000 クエリ
-
-### **制御機能**
-
-- **ローカル管理**: keyv + TTL でリアルタイム追跡
-- **自動切り替え**: 制限到達時のモデル自動切り替え
-- **動的機能制御**: 検索制限時は検索関数を無効化
-- **バッファ制御**: 80%到達で事前警告
-- **エラーハンドリング**: 429 エラーの適切な処理
-
-## 🔧 スラッシュコマンド仕様
-
-### **`/status`**
-
-ボットと API 使用状況の確認
-
-- ボット稼働状況
-- 現在使用モデル
-- レートリミット使用状況（RPM/TPM/RPD）
-- 検索機能使用量
-- Function Calling 対応状況
-
-### **`/config mention`**
-
-メンション応答の設定
-
-- `enabled`: true/false（メンション応答有効/無効）
-
-### **`/config channel`**
-
-チャンネル別応答設定
-
-- `add`: 応答チャンネル追加
-- `remove`: 応答チャンネル削除
-- `list`: 現在の応答チャンネル一覧
-
-### **`/config response`**
-
-応答制御設定
-
-- `compress`: デフォルト圧縮モード（2000 文字以内）
-- `split`: 分割送信モード（複数メッセージ）
-- `status`: 現在の設定確認
-
-### **`/config prompt`**
-
-プロンプト管理
-
-- `server set`: サーバー別カスタムプロンプト設定
-- `channel set`: チャンネル別カスタムプロンプト設定
-- `server show`: サーバープロンプト表示
-- `channel show`: チャンネルプロンプト表示
-- `reset`: プロンプトリセット
-
-### **`/search`**
-
-検索機能管理
-
-- `config`: 検索機能有効/無効設定
-- `status`: 検索使用状況確認
-- `test`: 検索機能テスト実行
-
-### **`/model`**
-
-モデル情報管理
-
-- `status`: 現在のモデル状況
-- `switch`: 手動モデル切り替え（緊急時）
-- `stats`: 使用統計確認
-
-## 📊 設定管理アーキテクチャ
-
-### **3 層構成**
-
-#### **1. 静的設定（YAML）**
-
-```yaml
-# config/bot-config.yaml
-prompts:
-  base_system: "固定ベースプロンプト"
-  sample_prompts:
-    tech_community: "技術者コミュニティ向け"
-    gaming_community: "ゲームコミュニティ向け"
-
-response_handling:
-  message_limit_strategy: "compress" # compress | split
-  max_characters: 2000
-  compress_instruction: "2000文字以内で簡潔に応答してください"
-
-message_processing:
-  mention_placeholder:
-    user: "[ユーザー]"
-    channel: "[チャンネル]"
-    role: "[ロール]"
-
-function_calling:
-  search_function:
-    name: "search_web"
-    description: "最新情報検索"
-
-  character_count_function:
-    name: "count_characters"
-    description: "文字数カウント"
-
-api:
-  gemini:
-    models:
-      primary: "gemini-2.5-flash-preview-0520"
-      fallback: "gemini-2.0-flash"
-```
-
-#### **2. 動的設定（keyv）**
-
-```typescript
-// サーバー別設定
-'guild:{guildId}:mention_enabled': boolean
-'guild:{guildId}:response_channels': string[]
-'guild:{guildId}:search_enabled': boolean
-'guild:{guildId}:server_prompt': string
-'guild:{guildId}:message_limit_strategy': 'compress' | 'split'
-
-// チャンネル別設定
-'channel:{channelId}:channel_prompt': string
-
-// 使用量追跡（TTL付き）
-'ratelimit:{model}:rpm:{minute}': number
-'search:monthly_usage:{month}': number
-```
-
-#### **3. 環境設定（.env）**
-
-```env
-DISCORD_TOKEN=your_discord_token
-GEMINI_API_KEY=your_gemini_key
-BRAVE_SEARCH_API_KEY=your_brave_search_key
-NODE_ENV=development
-DATABASE_URL=sqlite://config/bot.sqlite
-```
-
-## 🛡️ エラーハンドリング戦略
-
-### **API 制限対応**
-
-- **429 Too Many Requests**: 自動モデル切り替え + 機能無効化
-- **Function Calling 失敗**: 通常モード応答へフォールバック
-- **検索 API 障害**: 検索なし応答で継続
-- **全 API 障害**: 適切なエラーメッセージ送信
-
-### **Discord 制限対応**
-
-- **メッセージ長制限**: 圧縮/分割モード対応
-- **レート制限**: Discord API 制限の遵守
-- **権限エラー**: 適切な権限エラー通知
-
-### **添付ファイル対応**
-
-- **サイズ制限**: Gemini API 制限に応じた処理
-- **形式制限**: 対応形式外ファイルの適切な通知
-- **処理エラー**: ファイル処理失敗時のフォールバック
-
-## 📁 プロジェクト構造
-
-```
-gemini-discord-bot/
-├── src/
-│   ├── bot.ts                    # メインエントリーポイント
-│   ├── commands/                 # スラッシュコマンド
-│   ├── handlers/                 # Discord イベントハンドラー
-│   ├── services/                 # 外部サービス統合
-│   │   ├── configManager.ts      # YAML設定ファイル管理
-│   │   ├── config.ts             # keyv動的設定管理
-│   │   ├── gemini.ts             # Gemini API + Function Calling
-│   │   ├── braveSearch.ts        # Brave Search API
-│   │   ├── rateLimit.ts          # レートリミット管理
-│   │   ├── messageProcessor.ts   # メッセージ処理
-│   │   ├── responseManager.ts    # 応答制御（圧縮/分割）
-│   │   └── fileProcessor.ts      # ファイル添付処理
-│   ├── types/                    # TypeScript型定義
-│   └── utils/                    # ユーティリティ
-├── config/                       # 設定ファイル
-│   ├── bot-config.yaml          # メイン設定
-│   ├── bot-config.dev.yaml      # 開発環境用
-│   ├── bot-config.prod.yaml     # 本番環境用
-│   └── bot.sqlite               # データベース
-└── docs/                         # ドキュメント
-    ├── SPEC.md                  # この仕様書
-    └── CLAUDE.md                # Claude Code用実装ガイド
-```
-
-## 🚀 開発フェーズ
-
-### **Phase 1: 基盤構築**
-
-- [x] 技術スタック確認・検証
-- [ ] Bun 1.2.15 プロジェクト初期化
-- [ ] 基本 Discord 接続実装
-- [ ] YAML 設定管理システム実装
-- [ ] keyv 設定管理システム実装
-- [ ] プレースホルダベース処理実装
-
-### **Phase 2: Function Calling 統合**
-
-- [ ] Gemini API Function Calling 実装
-- [ ] Brave Search API 統合
-- [ ] 文字数カウント関数実装
-- [ ] 基本メッセージ処理実装
-- [ ] エラーハンドリング基盤
-- [ ] メンション応答実装
-
-### **Phase 3: 高度な機能**
-
-- [ ] スラッシュコマンド全機能実装
-- [ ] レートリミット管理システム
-- [ ] 動的機能制御システム
-- [ ] 応答制御システム（圧縮/分割）
-- [ ] 画像添付処理実装
-- [ ] プロンプト階層管理
-- [ ] 使用量監視・アラート
-
-### **Phase 4: 本番準備**
-
-- [ ] 包括的テスト実施
-- [ ] Dockerfile 作成
-- [ ] Coolify デプロイ設定
-- [ ] 本番環境監視設定
-- [ ] 文書・動画ファイル対応
-
-## 📊 品質・パフォーマンス要件
-
-### **応答時間**
-
-- メッセージ応答: 5 秒以内（検索含む）
-- スラッシュコマンド: 3 秒以内
-- 設定変更: 1 秒以内
-
-### **可用性**
-
-- 24 時間連続稼働
-- 自動復旧機能
-- グレースフル・シャットダウン
-
-### **拡張性**
-
-- 複数サーバー対応（1000+）
-- 同時接続ユーザー対応
-- 将来的なモデル追加対応
-- 設定ファイル拡張対応
-
-## 🔗 参考 URL・技術リソース
-
-### **Gemini API**
-
-- [Function Calling Guide](https://ai.google.dev/gemini-api/docs/function-calling)
-- [File API Documentation](https://ai.google.dev/api/files)
-- [Rate Limits](https://ai.google.dev/gemini-api/docs/rate-limits)
-
-### **Discord API**
-
-- [discord.js Documentation](https://discord.js.org/docs/packages/discord.js/main)
-- [Message Splitting Best Practices](https://discordjs.guide/popular-topics/common-questions.html#how-do-i-send-a-message-to-a-specific-channel)
-
-### **技術スタック**
-
-- [Bun 1.2.15 Documentation](https://bun.sh/)
-- [keyv Documentation](https://github.com/jaredwray/keyv)
-- [YAML Documentation](https://yaml.org/)
-
-### **デプロイ・運用**
-
-- [Coolify Documentation](https://coolify.io/docs/)
-
----
-
-**最終更新**: 2025 年 6 月 3 日
-**バージョン**: 4.0
-**承認**: 設計完了・実装準備完了
+**スラッシュコマンド**: `/status`, `/config`, `/search`, `/model`
+**ファイル処理**: 画像、文書対応 (Gemini File API)
+**高度設定**: サーバー/チャンネル別プロンプト

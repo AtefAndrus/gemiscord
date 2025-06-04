@@ -174,6 +174,7 @@ export const createLogger = (component: string, level?: LogLevel): Logger => {
 };
 
 // Export commonly used loggers
+export const botLogger = createLogger("Bot");
 export const configLogger = createLogger("Config");
 export const discordLogger = createLogger("Discord");
 export const geminiLogger = createLogger("Gemini");
