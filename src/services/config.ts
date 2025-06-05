@@ -308,4 +308,33 @@ export class ConfigService implements IConfigService {
     await Promise.all(keys.map((key) => this.keyv.delete(key)));
     logger.info(`Cleared all settings for guild ${guildId}`);
   }
+
+  // Rate limiting helper methods
+  async getRateLimitValue(key: string): Promise<number> {
+    return (await this.keyv.get(key)) ?? 0;
+  }
+
+  async setRateLimitValue(
+    key: string,
+    value: number,
+    ttl?: number
+  ): Promise<void> {
+    await this.keyv.set(key, value, ttl);
+  }
+
+  async hasRateLimitKey(key: string): Promise<boolean> {
+    return await this.keyv.has(key);
+  }
+
+  async deleteRateLimitKey(key: string): Promise<boolean> {
+    return await this.keyv.delete(key);
+  }
+
+  async setRateLimitString(
+    key: string,
+    value: string,
+    ttl?: number
+  ): Promise<void> {
+    await this.keyv.set(key, value, ttl);
+  }
 }

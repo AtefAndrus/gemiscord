@@ -59,7 +59,7 @@ async function initializeServices(): Promise<void> {
 }
 
 // Register event handlers
-function registerEventHandlers(client: ExtendedClient): void {
+async function registerEventHandlers(client: ExtendedClient): Promise<void> {
   logger.info("Registering event handlers...");
 
   // Ready event
@@ -68,6 +68,7 @@ function registerEventHandlers(client: ExtendedClient): void {
 
   // Message create event
   const messageHandler = new MessageCreateHandler();
+  await messageHandler.initialize();
   client.on(messageHandler.name, (message) =>
     messageHandler.execute(client, message)
   );
@@ -136,7 +137,7 @@ async function main(): Promise<void> {
     const client = createClient();
 
     // Register event handlers
-    registerEventHandlers(client);
+    await registerEventHandlers(client);
 
     // Setup shutdown handlers
     process.on("SIGINT", () => gracefulShutdown(client));
