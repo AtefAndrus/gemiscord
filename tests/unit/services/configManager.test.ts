@@ -1,4 +1,4 @@
-import { join, dirname } from "path";
+import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ConfigManager } from "../../../src/services/configManager.js";
 import { ConfigurationError } from "../../../src/utils/errors.js";
@@ -23,7 +23,18 @@ describe("ConfigManager", () => {
 
   describe("loadConfig", () => {
     it("should load configuration successfully", async () => {
-      await expect(configManager.loadConfig()).resolves.not.toThrow();
+      try {
+        await configManager.loadConfig();
+      } catch (error) {
+        console.log("Error details:", {
+          error,
+          type: typeof error,
+          message: error?.message,
+          stack: error?.stack,
+          testConfigDir,
+        });
+        throw error;
+      }
     });
 
     it("should throw error for invalid config directory", async () => {
@@ -83,7 +94,7 @@ describe("ConfigManager", () => {
       expect(declaration).toBeDefined();
       expect(declaration.functionDeclarations).toBeDefined();
       expect(declaration.functionDeclarations).toHaveLength(1);
-      expect(declaration.functionDeclarations[0].name).toBe("search_web");
+      expect(declaration.functionDeclarations![0].name).toBe("search_web");
     });
   });
 
@@ -98,7 +109,9 @@ describe("ConfigManager", () => {
       expect(declaration).toBeDefined();
       expect(declaration.functionDeclarations).toBeDefined();
       expect(declaration.functionDeclarations).toHaveLength(1);
-      expect(declaration.functionDeclarations[0].name).toBe("count_characters");
+      expect(declaration.functionDeclarations![0].name).toBe(
+        "count_characters"
+      );
     });
   });
 

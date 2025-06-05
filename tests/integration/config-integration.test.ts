@@ -6,6 +6,9 @@ describe("Configuration Integration Tests", () => {
   let configManager: ConfigManager;
   let configService: ConfigService;
   const testConfigDir = join(__dirname, "../fixtures/config");
+  const testPrefix = `test-${Date.now()}-${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
 
   beforeAll(async () => {
     // Initialize configuration manager with test config
@@ -34,20 +37,25 @@ describe("Configuration Integration Tests", () => {
       expect(responseStrategy).toBe("compress");
 
       // Set dynamic configuration in keyv
-      await configService.setGuildConfig("test-guild", {
+      await configService.setGuildConfig(`${testPrefix}-guild`, {
         mention_enabled: false,
         search_enabled: true,
         message_limit_strategy: "split",
       });
 
       // Verify dynamic configuration is stored and retrieved
-      const guildConfig = await configService.getGuildConfig("test-guild");
+      const guildConfig = await configService.getGuildConfig(
+        `${testPrefix}-guild`
+      );
       expect(guildConfig.mention_enabled).toBe(false);
       expect(guildConfig.search_enabled).toBe(true);
       expect(guildConfig.message_limit_strategy).toBe("split");
 
       // Verify static config remains unchanged
       expect(configManager.getResponseStrategy()).toBe("compress");
+
+      // Cleanup
+      await configService.clearGuildSettings(`${testPrefix}-guild`);
     });
 
     it("should handle function declarations from YAML correctly", async () => {
@@ -71,8 +79,8 @@ describe("Configuration Integration Tests", () => {
     });
 
     it("should handle guild and channel configuration hierarchy", async () => {
-      const guildId = "test-guild-hierarchy";
-      const channelId = "test-channel-hierarchy";
+      const guildId = `${testPrefix}-guild-hierarchy`;
+      const channelId = `${testPrefix}-channel-hierarchy`;
 
       // Set guild-level configuration
       await configService.setGuildConfig(guildId, {
@@ -104,10 +112,13 @@ describe("Configuration Integration Tests", () => {
         true
       );
       expect(await configService.isSearchEnabled(guildId)).toBe(false);
+
+      // Cleanup
+      await configService.clearGuildSettings(guildId);
     });
 
     it("should manage response channels correctly", async () => {
-      const guildId = "test-guild-channels";
+      const guildId = `${testPrefix}-guild-channels`;
       const channel1 = "channel-1";
       const channel2 = "channel-2";
       const channel3 = "channel-3";
@@ -141,6 +152,9 @@ describe("Configuration Integration Tests", () => {
       await configService.removeResponseChannel(guildId, channel3);
       guildConfig = await configService.getGuildConfig(guildId);
       expect(guildConfig.response_channels).toHaveLength(1);
+
+      // Cleanup: Clear all settings for this test
+      await configService.clearGuildSettings(guildId);
     });
 
     it("should handle statistics and usage tracking", async () => {
@@ -164,7 +178,9 @@ describe("Configuration Integration Tests", () => {
     });
 
     it("should clear guild settings completely", async () => {
-      const guildId = "test-guild-cleanup";
+      const guildId = `test-guild-cleanup-${Date.now()}-${Math.random().toString(
+        36
+      )}`;
 
       // Set various guild configurations
       await configService.setGuildConfig(guildId, {
@@ -198,7 +214,7 @@ describe("Configuration Integration Tests", () => {
 
   describe("Configuration reloading and persistence", () => {
     it("should reload YAML configuration without affecting keyv data", async () => {
-      const guildId = "test-guild-persistence";
+      const guildId = `${testPrefix}-guild-persistence`;
 
       // Set some keyv data
       await configService.setGuildConfig(guildId, {

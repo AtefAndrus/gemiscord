@@ -2,7 +2,7 @@
 
 import { Tool, Type } from "@google/genai";
 import { readFile } from "fs/promises";
-import { join } from "path";
+import { join, isAbsolute } from "path";
 import { parse } from "yaml";
 import { IConfigManager } from "../interfaces/services.js";
 import {
@@ -20,7 +20,9 @@ export class ConfigManager implements IConfigManager {
   private readonly baseConfigFile = "bot-config.yaml";
 
   constructor(configDir: string = "config") {
-    this.configPath = join(process.cwd(), configDir);
+    this.configPath = isAbsolute(configDir) 
+      ? configDir 
+      : join(process.cwd(), configDir);
   }
 
   async loadConfig(): Promise<void> {
@@ -283,7 +285,7 @@ export class ConfigManager implements IConfigManager {
 
     if (typeof ttl !== "number") {
       logger.warn(`No cache TTL found for key: ${key}, using default`);
-      return 60; // Default to 60 minutes
+      return 60 * 60 * 1000; // Default to 60 minutes in milliseconds
     }
 
     return ttl * 60 * 1000; // Convert minutes to milliseconds

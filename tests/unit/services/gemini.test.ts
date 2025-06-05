@@ -1,8 +1,7 @@
 // Unit tests for Gemini service
 
-import { GeminiService } from "../../../src/services/gemini.js";
 import { ConfigManager } from "../../../src/services/configManager.js";
-import { APIError } from "../../../src/utils/errors.js";
+import { GeminiService } from "../../../src/services/gemini.js";
 
 describe("GeminiService", () => {
   let geminiService: GeminiService;

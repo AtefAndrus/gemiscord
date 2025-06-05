@@ -46,6 +46,7 @@ export class ConfigService implements IConfigService {
     config.mention_enabled =
       (await this.keyv.get(CONFIG_KEYS.GUILD.MENTION_ENABLED(guildId))) ??
       DEFAULTS.GUILD.MENTION_ENABLED;
+    
     config.response_channels =
       (await this.keyv.get(CONFIG_KEYS.GUILD.RESPONSE_CHANNELS(guildId))) ??
       DEFAULTS.GUILD.RESPONSE_CHANNELS;
@@ -306,6 +307,7 @@ export class ConfigService implements IConfigService {
     ];
 
     await Promise.all(keys.map((key) => this.keyv.delete(key)));
+
     logger.info(`Cleared all settings for guild ${guildId}`);
   }
 
