@@ -1,294 +1,327 @@
-# Gemiscord - Gemini Discord Bot
+# Gemiscord - AI-Powered Discord Bot
 
-A Discord bot that integrates Google's Gemini API with Function Calling and Brave Search API to provide intelligent conversational responses with seamless web search capabilities.
+An intelligent Discord bot powered by Google's Gemini AI with automatic web search capabilities. Chat naturally with the bot and get up-to-date information from the web.
 
-## 🚀 Development Status
+> **⚠️ Self-Hosted Only**: This bot is not provided as a service. You need to set up your own Discord bot, obtain your own API keys, and run it on your own infrastructure.
 
-**Phase 0-1 ✅ COMPLETED**: Core foundation and configuration system
-**Phase 2 ✅ COMPLETED**: Gemini API and Function Calling integration
-**Phase 3 🔜 NEXT**: Slash commands implementation
+## ✨ Features
 
-**Current Status**: AI integration fully functional with automatic web search, rate limiting, and comprehensive test suite.
+### 🤖 **AI Chat Integration**
 
-See `IMPLEMENTATION_PLAN.md` for detailed progress and `CLAUDE.md` for implementation guidelines.
+- **Natural Conversations**: Chat directly with Google's Gemini AI
+- **Automatic Web Search**: Bot automatically searches the web when needed
+- **Smart Function Calling**: Decides whether to search or respond directly
+- **Rate Limiting**: Automatic model switching to ensure uptime
 
-## Features
+### 💬 **Response Modes**
 
-### ✅ Implemented (Phase 0-2)
+- **Mention Response**: `@YourBot What's the weather today?`
+- **Auto-Response Channels**: Configure channels for mention-free conversations
+- **Message Sanitization**: Safe handling of Discord mentions and content
 
-- ⚙️ **Advanced Configuration**: YAML + SQLite dual-layer configuration system
-- 🔒 **Security**: Comprehensive message sanitization and input validation
-- 📝 **Logging**: Structured logging with multiple levels
-- 🧪 **Testing**: Bun native test runner with 80%+ coverage
-- 🎯 **Type Safety**: Full TypeScript strict mode implementation
-- 🤖 **Gemini AI Integration**: Function Calling support with model switching
-- 🔍 **Smart Search**: Brave Search API integration with quota management
-- 💬 **Response Modes**: Mention-based and auto-responses
-- 📊 **Rate Limiting**: Automatic model switching (gemini-2.5-flash → gemini-2.0-flash)
+### ⚙️ **Configuration System**
 
-### 🔜 Coming Soon (Phase 3)
+- **Server-Specific Settings**: Each Discord server has its own configuration
+- **Channel Management**: Control which channels the bot responds in
+- **Custom Prompts**: Set server-specific AI behavior
 
-- `/status` - Bot status and API usage statistics
-- `/config` - Guild configuration management
-- `/search` - Manual search functionality control
+### 🔜 **Coming Soon (Slash Commands)**
+
+- `/status` - View bot status and API usage
+- `/config` - Manage server settings
+- `/search` - Control search functionality
 - `/model` - AI model information and switching
 
-### ⏳ Planned (Phase 4+)
+## 🚀 **Setup & Deployment**
 
-- 🐳 **Docker Deployment**: Production-ready containerization
-- 📊 **Monitoring**: Advanced logging and metrics
-- 🔧 **Admin Panel**: Web-based configuration interface
+**⚠️ Important**: You must set up your own Discord bot and obtain your own API keys before deployment.
 
-## Prerequisites
+### 📦 **Docker Deployment (Recommended)**
 
-- [Bun](https://bun.sh/) 1.2.15 or higher
-- Discord Bot Token with Message Content Intent
-- Gemini API Key (with Function Calling access)
-- Brave Search API Key (Free: 2,000 queries/month)
-
-## Quick Start
-
-1. **Clone and install**:
+1. **Get API Keys** (see [API Keys Setup](#-api-keys-setup) below)
+2. **Clone and Build**:
 
 ```bash
+git clone https://github.com/your-username/gemiscord.git
+cd gemiscord
+cp .env.example .env
+# Edit .env with your API keys
+docker build -t gemiscord .
+docker run -d --env-file .env gemiscord
+```
+
+### 🛠️ **Manual Deployment**
+
+For manual deployment or development, see the [For Developers](#-for-developers-source-code-modification--testing) section below.
+
+## 🔑 **API Keys Setup**
+
+You **must** obtain these API keys yourself:
+
+### **Discord Bot Token**
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Create a new application → Bot section → Copy token
+3. Enable "Message Content Intent" and "Server Members Intent"
+4. Invite bot to your server with appropriate permissions
+
+### **Gemini API Key**
+
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a new API key
+3. Ensure Function Calling is enabled for your account
+
+### **Brave Search API Key** (Optional)
+
+1. Sign up at [Brave Search API](https://api.search.brave.com/)
+2. Free tier: 2,000 queries/month
+3. Copy your API key from the dashboard
+
+## 📋 **How to Use**
+
+### **Basic Chat**
+
+Once the bot is added to your Discord server:
+
+```text
+@YourBot What's the weather like in Tokyo today?
+@YourBot Tell me about the latest AI technology news
+@YourBot What is 2+2? (Simple questions don't require web search)
+```
+
+### **Auto-Response Channels**
+
+Configure channels where the bot responds without needing @mentions:
+
+```text
+# In #ai-chat channel (if configured for auto-response)
+What's happening in the world today?
+# Bot responds automatically without @mention
+```
+
+### **Expected Behavior**
+
+- **Web Search**: Bot automatically searches when you ask about current events, weather, news
+- **Direct Response**: Math, general knowledge, and conversational questions answered directly
+- **Smart Decisions**: AI decides whether web search is needed for each question
+- **Rate Limiting**: Automatically switches AI models if usage limits are reached
+
+## 🎛️ **Configuration**
+
+### **Server Settings**
+
+Each Discord server can customize:
+
+- **Response Channels**: Which channels the bot auto-responds in
+- **Custom Prompts**: Server-specific AI personality/behavior
+- **Search Settings**: Enable/disable web search functionality
+
+### **Coming Soon: Slash Commands**
+
+Management commands will be available in Phase 3:
+
+- `/config mention enable/disable` - Toggle mention responses
+- `/config add-channel #channel` - Add auto-response channel
+- `/status` - View bot performance and usage statistics
+
+## 👩‍💻 **For Developers (Source Code Modification & Testing)**
+
+> This section is for developers who want to modify the source code, add features, or contribute to the project.
+
+### **Development Prerequisites**
+
+- [Bun](https://bun.sh/) 1.2.15 or higher
+- TypeScript/Node.js development experience
+- Git and Docker knowledge
+- Understanding of Discord Bot development
+
+### **Development Environment Setup**
+
+1. **Fork and Clone**
+
+```bash
+# Fork the repository on GitHub first
 git clone https://github.com/your-username/gemiscord.git
 cd gemiscord
 bun install
 ```
 
-2. **Environment setup**:
+2. **API Keys Setup**
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys
 ```
 
-Required environment variables:
+Edit `.env` with your test API keys (same as [API Keys Setup](#-api-keys-setup)):
 
 ```env
-DISCORD_TOKEN=your_discord_bot_token
-DISCORD_CLIENT_ID=your_discord_application_id
+DISCORD_TOKEN=your_test_discord_bot_token
+DISCORD_CLIENT_ID=your_test_discord_application_id
 GEMINI_API_KEY=your_gemini_api_key
 BRAVE_SEARCH_API_KEY=your_brave_search_key
 NODE_ENV=development
-DATABASE_URL=sqlite://config/bot.sqlite
 ```
 
-3. **Configuration**:
-
-Edit `config/bot-config.yaml` for bot behavior customization:
-
-```yaml
-# Example: Change system prompt, enable/disable features
-bot:
-  systemPrompt: "あなたは親切で知識豊富なAIアシスタントです。"
-  responseStrategy: "balanced"
-```
-
-4. **Development**:
+3. **Development Workflow**
 
 ```bash
-# Start in development mode
+# Install dependencies
+bun install
+
+# Start development server with hot reload
 bun run dev
 
-# Run tests
+# Run test suite
 bun test
 
-# Run tests with coverage
+# Run tests with coverage report
 bun test --coverage
 
-# Run tests in watch mode
+# Run tests in watch mode (for TDD)
 bun test --watch
+
+# Type checking
+bun run typecheck
+
+# Lint code
+bun run lint
 ```
 
-5. **Production**:
+4. **Testing & Quality Assurance**
 
 ```bash
-# Start in production mode
-NODE_ENV=production bun start
-```
-
-## API Keys Setup
-
-### Discord Bot Token
-
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-2. Create a new application
-3. Go to "Bot" section and create a bot
-4. Copy the token and enable "Message Content Intent"
-5. Invite the bot with appropriate permissions
-
-### Gemini API Key
-
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a new API key
-3. Ensure Function Calling is enabled in your account
-
-### Brave Search API Key
-
-1. Sign up at [Brave Search API](https://api.search.brave.com/)
-2. Free plan includes 2,000 queries/month
-3. Copy your API key from the dashboard
-
-## Bot Usage
-
-### Mention Response
-
-```
-@YourBot What's the weather like in Tokyo today?
-```
-
-The bot will automatically search for current weather information and respond with relevant details.
-
-### Auto Response (Channel-specific)
-
-Configure channels for automatic responses without mentions:
-
-```yaml
-# In bot-config.yaml
-features:
-  autoResponse:
-    enabled: true
-    channels: ["general", "ai-chat"]
-```
-
-### Function Calling Features
-
-**Automatic Web Search**: Bot decides when to search based on query context
-**Character Counting**: Built-in text analysis functions
-**Rate Limiting**: Automatic model switching when limits are reached
-
-## Development
-
-### Project Structure
-
-```
-src/
-├── bot.ts                   # Main entry point
-├── handlers/                # Discord event handlers
-│   ├── messageCreate.ts     # Message processing with AI
-│   └── ready.ts            # Bot startup
-├── services/               # Core business logic
-│   ├── gemini.ts          # Gemini API integration
-│   ├── braveSearch.ts     # Brave Search API
-│   ├── rateLimit.ts       # Rate limiting & model switching
-│   ├── configManager.ts   # YAML configuration
-│   ├── config.ts          # Dynamic configuration (keyv)
-│   └── messageProcessor.ts # Message sanitization
-├── types/                 # TypeScript definitions
-├── utils/                 # Logging, errors, constants
-└── commands/             # Slash commands (Phase 3)
-```
-
-### Testing
-
-Built on Bun's native test runner for maximum performance:
-
-```bash
-# Run all tests
+# Run all tests before committing
 bun test
 
-# Unit tests only
-bun test tests/unit
+# Check test coverage (must be 80%+)
+bun test --coverage
 
-# Integration tests only
+# Run integration tests
 bun test tests/integration
 
-# Coverage report
-bun test --coverage
-
-# Watch mode for development
-bun test --watch
+# Manual Discord testing (follow DISCORD_TEST_GUIDE.md)
+bun run dev
+# Test in your Discord server
 ```
 
-**Test Coverage**: 80%+ for all implemented features
-**Performance**: ~400ms for full test suite execution
+### **Project Structure**
 
-### Configuration System
+```text
+src/
+├── bot.ts              # Main entry point
+├── handlers/           # Discord event handlers
+├── services/          # AI, search, rate limiting
+├── commands/          # Slash commands (Phase 3)
+├── types/             # TypeScript definitions
+└── utils/             # Logging, errors, constants
 
-**3-Layer Configuration**:
-
-1. **YAML** (`config/bot-config.yaml`): Static configuration
-2. **SQLite** (via keyv): Dynamic guild-specific settings
-3. **Environment**: API keys and secrets
-
-Example configuration:
-
-```yaml
-bot:
-  systemPrompt: "Custom AI assistant behavior"
-  responseStrategy: "balanced" # concise | balanced | detailed
-
-features:
-  search:
-    enabled: true
-    defaultRegion: "JP"
-    maxResults: 5
-
-  rateLimit:
-    safetyBuffer: 0.8
-    switchThreshold: 80
+config/                # YAML configuration files
+tests/                 # Test suites (80%+ coverage)
 ```
 
-## API Limits & Rate Limiting
+### **Configuration Files**
 
-**Gemini API Limits**:
+- `config/bot-config.yaml` - Main bot settings
+- `.env` - API keys and secrets
+- SQLite database - Dynamic guild settings
 
-- gemini-2.5-flash-preview-0520: 10 RPM, 250K TPM, 500 RPD
-- gemini-2.0-flash (fallback): 15 RPM, 1M TPM, 1500 RPD
+### **Testing & Quality**
 
-**Brave Search**: 2,000 free queries/month
+- **Framework**: Bun native test runner
+- **Coverage**: 80%+ maintained
+- **Performance**: ~400ms full test suite
+- **Types**: Full TypeScript strict mode
 
-**Automatic Handling**:
+### **Development Resources**
 
-- Model switching when primary model hits limits
-- 80% safety buffer to prevent rate limit errors
-- Local TTL counters for accurate tracking
+- `IMPLEMENTATION_PLAN.md` - Detailed implementation guide
+- `tests/README.md` - Testing framework documentation
+- `DISCORD_TEST_GUIDE.md` - Manual testing procedures
 
-## Deployment
+### **Contributing & Development Guidelines**
 
-### Production Environment
+1. **Code Standards**
+
+   - Follow TypeScript strict mode
+   - Maintain 80%+ test coverage
+   - Use Bun native test runner
+   - Follow existing code patterns
+
+2. **Development Process**
+
+   - Create feature branch: `git checkout -b feature/new-feature`
+   - Write tests first (TDD approach)
+   - Run full test suite: `bun test`
+   - Check coverage: `bun test --coverage`
+   - Manual Discord testing (see `DISCORD_TEST_GUIDE.md`)
+
+3. **Documentation**
+
+   - `IMPLEMENTATION_PLAN.md` - Implementation roadmap
+   - `tests/README.md` - Testing framework guide
+   - `DISCORD_TEST_GUIDE.md` - Manual testing procedures
+
+4. **Pull Request Process**
+   - Ensure all tests pass
+   - Update documentation if needed
+   - Follow conventional commit messages
+   - Include testing evidence
+
+## 🐳 **Docker Build (Production)**
+
+For production deployment, build your own Docker image:
+
+```dockerfile
+# Dockerfile (included in repository)
+FROM oven/bun:1.2.15
+WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --production
+COPY . .
+CMD ["bun", "start"]
+```
+
+Build and deploy:
 
 ```bash
-# Set production environment
-export NODE_ENV=production
+# Build your own image
+docker build -t my-gemiscord-bot .
 
-# Use production config
-export CONFIG_ENV=prod
+# Run in production
+docker run -d --restart unless-stopped \
+  --env-file .env \
+  --name gemiscord-bot \
+  my-gemiscord-bot
 
-# Start with process manager
-pm2 start bun --name gemiscord -- start
+# Or use docker-compose (docker-compose.yml included)
+docker-compose up -d
 ```
 
-### Docker (Phase 4)
+## 📊 **Performance & Limits**
 
-Docker deployment configuration will be added in Phase 4.
+### **Response Performance**
 
-## Contributing
+- **AI Responses**: <5 seconds
+- **Slash Commands**: <3 seconds
+- **Memory Usage**: <150MB production
+- **Uptime**: 99%+ with auto-restart
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Run tests: `bun test`
-4. Commit changes: `git commit -m "Add new feature"`
-5. Push to branch: `git push origin feature/new-feature`
-6. Create a Pull Request
+### **API Rate Limits**
 
-## Performance
+- **Gemini API**: Auto-switching between models
+- **Brave Search**: 2,000 free queries/month
+- **Discord**: Standard rate limit handling
 
-- **Response Time**: <5 seconds for AI responses
-- **Memory Usage**: <150MB in production
-- **Test Suite**: ~400ms execution time
-- **Cold Start**: <2 seconds
+## 📄 **License & Support**
 
-## License
+- **License**: MIT License - see [LICENSE](LICENSE)
+- **Issues**: GitHub Issues for bug reports
+- **Contributions**: Fork → PR workflow welcomed
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 🔗 **Useful Links**
 
-## Support
-
-For support and questions:
-
-- Check `CLAUDE.md` for implementation guidelines
-- Review `IMPLEMENTATION_PLAN.md` for development roadmap
-- Run `bun test` to verify your setup
-- Create an issue for bugs or feature requests
+- 📚 [Discord.js Documentation](https://discord.js.org/)
+- 🧠 [Google Gemini API](https://ai.google.dev/)
+- 🔍 [Brave Search API](https://api.search.brave.com/)
+- 🏗️ [Discord Developer Portal](https://discord.com/developers/applications)
+- 🟢 [Bun Runtime](https://bun.sh/)
