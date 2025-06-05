@@ -1,6 +1,11 @@
-import { join } from "path";
-import { ConfigManager } from "../../../src/services/configManager";
-import { ConfigurationError } from "../../../src/utils/errors";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import { ConfigManager } from "../../../src/services/configManager.js";
+import { ConfigurationError } from "../../../src/utils/errors.js";
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe("ConfigManager", () => {
   let configManager: ConfigManager;

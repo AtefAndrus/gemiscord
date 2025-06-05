@@ -1,4 +1,4 @@
-# Gemini Discord Bot - Claude Code Implementation Guide v5.0
+# Gemini Discord Bot - Claude Code Implementation Guide v6.0
 
 ## Project Overview
 
@@ -13,18 +13,26 @@ A Discord bot integrating Google's Gemini API with Function Calling and Brave Se
 - **Discord Integration**: Basic bot connection, message handling, and sanitization
 - **Message Processing**: Placeholder-based security processing implemented
 - **Utils**: Logging, error handling, constants, and sanitization
-- **Test Suite**: Comprehensive unit & integration tests (80%+ coverage)
-- **Test Infrastructure**: Jest, mocks, fixtures, and CI/CD ready
+- **Test Infrastructure**: Comprehensive unit & integration tests (80%+ coverage)
 
-### 🚧 **Phase 2 Next (Function Calling Integration)**
+### ✅ **Phase 2 Completed (AI Integration) - 100% Complete**
 
-- **Missing**: Gemini API client, Brave Search integration, rate limiting
-- **Current**: Dummy responses in messageCreate.ts line 154
-- **Ready**: All foundation components implemented for AI integration
+- **Gemini API Client**: Full integration with Function Calling support
+- **Brave Search Integration**: Web search with quota management
+- **Rate Limiting**: Model switching with safety buffers (gemini-2.5-flash → gemini-2.0-flash)
+- **Function Calling**: Automated search_web and count_characters functions
+- **Message Flow**: Complete end-to-end message processing
+- **Test Migration**: Migrated from Jest to Bun native test runner
+
+### 🚧 **Phase 3 Next (Slash Commands)**
+
+- **Missing**: Slash command implementations
+- **Ready**: Foundation and AI integration complete
+- **Commands**: `/status`, `/config`, `/search`, `/model`
 
 ## Implementation Guidelines
 
-1. **Follow `IMPLEMENTATION_PLAN.md`**: Check detailed plan before starting Phase 2
+1. **Follow `IMPLEMENTATION_PLAN.md`**: Check detailed plan before starting Phase 3
 2. **Check Official Docs**: Always verify latest API specs and types before implementation
 3. **TodoList Management**: Use TodoWrite tool to track progress throughout implementation
 4. **Test-Driven Development**: Write tests first, then implement features
@@ -34,6 +42,7 @@ A Discord bot integrating Google's Gemini API with Function Calling and Brave Se
 ## Tech Stack
 
 - **Runtime**: Bun 1.2.15 with TypeScript strict mode
+- **Testing**: Bun native test runner (migrated from Jest)
 - **Discord**: discord.js v14.19.3
 - **AI**: @google/genai (Function Calling), Brave Search API
 - **Storage**: keyv + @keyv/sqlite (dynamic config), YAML (static config)
@@ -57,25 +66,44 @@ A Discord bot integrating Google's Gemini API with Function Calling and Brave Se
 ## Implementation Status
 
 **✅ Phase 0-1 (Foundation)**: TypeScript types, Discord bot, YAML/keyv config, message handling
-**🚧 Phase 2 (Next)**: Gemini API client, Brave Search, Function Calling, rate limiting
-**⏳ Phase 3**: Slash commands, file processing, advanced features
+**✅ Phase 2 (AI Integration)**: Gemini API client, Brave Search, Function Calling, rate limiting
+**🚧 Phase 3 (Next)**: Slash commands, advanced features
 **⏳ Phase 4**: Docker, production deployment, monitoring
 
 ## Current File Structure
 
-```
+```text
 src/
 ├── bot.ts                   # Main entry point ✅
 ├── handlers/                # Discord event handlers ✅
-│   ├── messageCreate.ts     # Message processing ✅
+│   ├── messageCreate.ts     # Message processing with AI ✅
 │   └── ready.ts             # Bot startup ✅
-├── services/                # Core business logic
+├── services/                # Core business logic ✅
 │   ├── configManager.ts     # YAML config ✅
 │   ├── config.ts            # keyv dynamic config ✅
-│   └── messageProcessor.ts  # Message sanitization ✅
+│   ├── messageProcessor.ts  # Message sanitization ✅
+│   ├── gemini.ts           # Gemini API integration ✅
+│   ├── braveSearch.ts      # Brave Search API ✅
+│   └── rateLimit.ts        # Rate limiting & model switching ✅
 ├── types/                   # TypeScript definitions ✅
 ├── utils/                   # Logging, errors, constants ✅
 └── config/                  # YAML config files ✅
+```
+
+## Test Infrastructure
+
+**Framework**: Bun native test runner (100% Jest compatibility)
+**Coverage**: 80%+ for all implemented features
+**Types**: Unit tests, integration tests, E2E message flow tests
+**Performance**: ~400ms for full test suite execution
+
+```bash
+# Test commands
+bun test                    # Run all tests
+bun test --coverage        # With coverage report
+bun test --watch          # Watch mode
+bun test tests/unit       # Unit tests only
+bun test tests/integration # Integration tests only
 ```
 
 ## Environment Variables (.env)
@@ -102,14 +130,21 @@ DATABASE_URL=sqlite://config/bot.sqlite
 **keyv**: Guild settings, usage tracking, rate limits
 **Current Config**: `config/bot-config.yaml` with Japanese prompts implemented
 
-## Next: Phase 2 Implementation
+## Next: Phase 3 Implementation
 
 **Priority Tasks**:
 
-1. Implement Gemini API client with Function Calling (`src/services/gemini.ts`)
-2. Integrate Brave Search API (`src/services/braveSearch.ts`)
-3. Add rate limiting service (`src/services/rateLimit.ts`)
-4. Replace dummy response in `messageCreate.ts:154` with AI integration
-5. Test with real Discord server and verify all APIs work
+1. Implement slash commands framework
+2. Add `/status` command for bot statistics
+3. Add `/config` command for guild configuration
+4. Add `/search` command for manual search
+5. Add `/model` command for AI model information
 
 **Reference**: Follow detailed implementation plan in `IMPLEMENTATION_PLAN.md`
+
+# important-instruction-reminders
+
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.

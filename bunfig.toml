@@ -1,0 +1,6 @@
+# Bun configuration file
+# Minimal configuration for Bun native test runner
+
+[test]
+# Setup file to run before tests
+preload = ["./tests/setup.ts"]

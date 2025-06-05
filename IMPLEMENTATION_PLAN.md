@@ -489,54 +489,55 @@ config/                      # 設定ファイル
 - CI/CD 対応のテストスクリプト
 - カバレッジ 80%基準設定
 
-### 🚧 **次のフェーズ**: Phase 2 (Function Calling 統合) - **最優先**
+### ✅ **完了フェーズ**: Phase 2 (Function Calling 統合) - **100%完了**
 
-#### **準備完了項目**
+#### **完成済み項目**
 
 ✅ 全基盤コンポーネントが AI 統合に対応済み
 ✅ Function Calling 用型定義完備
-✅ テストフレームワーク構築完了
+✅ Bun native テストフレームワーク構築完了
 ✅ エラーハンドリング体制整備
 ✅ ログシステム稼働中
 
-#### **実装必要項目**
+#### **実装完了項目**
 
-🔜 `src/services/gemini.ts` - Gemini API + Function Calling
-🔜 `src/services/braveSearch.ts` - Brave Search API 統合
-🔜 `src/services/rateLimit.ts` - レート制限・モデル切替
-🔜 messageCreate.ts の AI 統合 (現在 L154 でダミーレスポンス)
-🔜 Phase 2 対応テスト追加
+✅ `src/services/gemini.ts` - Gemini API + Function Calling 実装済み
+✅ `src/services/braveSearch.ts` - Brave Search API 統合完了
+✅ `src/services/rateLimit.ts` - レート制限・モデル切替実装済み
+✅ messageCreate.ts の AI 統合完了（ダミーレスポンス削除済み）
+✅ Phase 2 対応テスト実装完了
 
-### 📋 **Phase 2 優先実装順序**
+### 🚧 **Phase 3 次期実装計画 - スラッシュコマンド**
 
-1. **Gemini Service** (最重要)
+1. **スラッシュコマンドフレームワーク** (最重要)
 
-   - Function Calling 実装
-   - レート制限エラーハンドリング
-   - テスト: モック使用の単体テスト
+   - Discord.js v14 Interactions 実装
+   - コマンド登録スクリプト
+   - InteractionCreateHandler 実装
 
-2. **Brave Search Service**
+2. **基本コマンド実装**
 
-   - API 統合とエラーハンドリング
-   - 月間クォータ管理
-   - テスト: API レスポンスモック
+   - `/status` - ボット状態・API 使用量統計
+   - `/config` - ギルド設定管理
+   - `/search` - 検索機能管理
+   - `/model` - AI モデル情報・切替
 
-3. **Rate Limit Service**
+3. **権限管理システム**
 
-   - keyv TTL ベースカウンター
-   - 自動モデル切替ロジック
-   - テスト: 制限条件テスト
+   - 管理者権限チェック
+   - ギルド別権限設定
+   - セキュリティ検証
 
-4. **Message Flow Integration**
+4. **Phase 3 テスト実装**
 
-   - messageCreate.ts のダミー置換
-   - 完全な AI 応答フロー
-   - テスト: E2E フロー検証
+   - スラッシュコマンド単体テスト
+   - インタラクション統合テスト
+   - 権限テストスイート
 
 5. **実環境検証**
-   - Discord サーバーでのテスト
-   - 全 API 連携確認
-   - パフォーマンス測定
+   - Discord サーバーでのコマンドテスト
+   - パフォーマンス・セキュリティ検証
+   - ユーザビリティ確認
 
 ### ⚠️ **技術的準備状況**
 
@@ -862,21 +863,17 @@ bun run src/bot.ts
 ### テスト環境セットアップ
 
 ```bash
-# テストフレームワークのインストール
-bun add --dev @types/jest jest ts-jest
-bun add --dev supertest @types/supertest  # HTTP API テスト用
+# Bun native test runner（既に設定済み）
+bun test                    # 全テスト実行
+bun test --coverage        # カバレッジ付き実行
+bun test --watch           # 監視モード
+bun test tests/unit        # 単体テストのみ
+bun test tests/integration # 統合テストのみ
 
-# Jest設定 (jest.config.js)
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/tests'],
-  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
-  coverageThreshold: {
-    global: { branches: 80, functions: 80, lines: 80, statements: 80 }
-  }
-};
+# テスト品質基準
+# - カバレッジ 80%以上
+# - 実行時間 400ms以内（全テスト）
+# - CI対応のテストスクリプト実装済み
 ```
 
 ## Phase 2 詳細実装・テスト計画
@@ -1468,12 +1465,3 @@ bun test tests/unit/services/gemini.test.ts
 # 結合テストのみ実行
 bun test tests/integration/
 ```
-
-### テスト品質基準
-
-- **単体テスト**: カバレッジ 80% 以上
-- **結合テスト**: 主要フロー 100% カバー
-- **E2E テスト**: ユーザーシナリオ 100% カバー
-- **実行時間**: 全テスト 30 秒以内
-
-この詳細なテスト戦略により、各実装ステップで確実に品質を確保しながら進めることができます。
