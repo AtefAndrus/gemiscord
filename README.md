@@ -15,7 +15,7 @@ An intelligent Discord bot powered by Google's Gemini AI with automatic web sear
 
 ### 💬 **Response Modes**
 
-- **Mention Response**: `@YourBot What's the weather today?`
+- **Mention Response**: `@gemiscord What's the weather today?`
 - **Auto-Response Channels**: Configure channels for mention-free conversations
 - **Message Sanitization**: Safe handling of Discord mentions and content
 
@@ -25,12 +25,12 @@ An intelligent Discord bot powered by Google's Gemini AI with automatic web sear
 - **Channel Management**: Control which channels the bot responds in
 - **Custom Prompts**: Set server-specific AI behavior
 
-### 🔜 **Coming Soon (Slash Commands)**
+### ⚡ **Slash Commands (Phase 3 Complete)**
 
-- `/status` - View bot status and API usage
-- `/config` - Manage server settings
-- `/search` - Control search functionality
-- `/model` - AI model information and switching
+- `/status` - View bot status, uptime, and API usage statistics
+- `/config` - Manage server-specific bot configuration (5 subcommands)
+- `/search` - Control web search functionality and monitor quota (3 subcommands)
+- `/model` - AI model information, usage stats, and rate limits (3 subcommands)
 
 ## 🚀 **Setup & Deployment**
 
@@ -42,7 +42,7 @@ An intelligent Discord bot powered by Google's Gemini AI with automatic web sear
 2. **Clone and Build**:
 
 ```bash
-git clone https://github.com/your-username/gemiscord.git
+git clone https://github.com/AtefAndrus/gemiscord.git
 cd gemiscord
 cp .env.example .env
 # Edit .env with your API keys
@@ -84,9 +84,9 @@ You **must** obtain these API keys yourself:
 Once the bot is added to your Discord server:
 
 ```text
-@YourBot What's the weather like in Tokyo today?
-@YourBot Tell me about the latest AI technology news
-@YourBot What is 2+2? (Simple questions don't require web search)
+@gemiscord What's the weather like in Tokyo today?
+@gemiscord Tell me about the latest AI technology news
+@gemiscord What is 2+2? (Simple questions don't require web search)
 ```
 
 ### **Auto-Response Channels**
@@ -116,13 +116,20 @@ Each Discord server can customize:
 - **Custom Prompts**: Server-specific AI personality/behavior
 - **Search Settings**: Enable/disable web search functionality
 
-### **Coming Soon: Slash Commands**
+### **Slash Commands (Administrator Only)**
 
-Management commands will be available in Phase 3:
+Complete slash command system implemented with admin-only access:
 
 - `/config mention enable/disable` - Toggle mention responses
-- `/config add-channel #channel` - Add auto-response channel
-- `/status` - View bot performance and usage statistics
+- `/config channel add/remove #channel` - Manage auto-response channels
+- `/config prompt set "Custom prompt"` - Set server-specific AI behavior
+- `/config strategy compress/split` - Set message handling strategy
+- `/config view` - View current server configuration
+- `/search toggle enable/disable` - Control search functionality
+- `/search quota` - View search usage and limits
+- `/search test "query"` - Test search functionality
+- `/status` - View bot performance, uptime, and API usage statistics
+- `/model info/stats/limits` - AI model information and usage
 
 ## 👩‍💻 **For Developers (Source Code Modification & Testing)**
 
@@ -141,7 +148,7 @@ Management commands will be available in Phase 3:
 
 ```bash
 # Fork the repository on GitHub first
-git clone https://github.com/your-username/gemiscord.git
+git clone https://github.com/AtefAndrus/gemiscord.git
 cd gemiscord
 bun install
 ```
