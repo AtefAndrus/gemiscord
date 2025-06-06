@@ -30,6 +30,76 @@ export interface YAMLConfig {
   constants: {
     cache: CacheTTLConfig;
   };
+
+  // UI/UX configuration
+  ui: {
+    activity: {
+      update_interval: number;
+      messages: string[];
+    };
+    messaging: {
+      split_delay: number;
+      preview_length: number;
+    };
+    emojis: {
+      success: string;
+      error: string;
+      warning: string;
+      search: string;
+    };
+  };
+
+  // Search and AI parameters
+  search: {
+    defaults: {
+      count: number;
+      max_results: number;
+      display_count: number;
+    };
+    validation: {
+      query: {
+        min_length: number;
+        max_length: number;
+      };
+    };
+    formatting: {
+      preview_length: number;
+    };
+  };
+
+  ai: {
+    timeout: number;
+    temperature: number;
+  };
+
+  // Monitoring and alerting
+  monitoring: {
+    thresholds: {
+      usage: {
+        warning: number;
+        critical: number;
+      };
+      memory: {
+        warning: number;
+        critical: number;
+      };
+    };
+    intervals: {
+      health_check: number;
+      metrics: number;
+    };
+  };
+
+  // Rate limiting enhancements
+  rate_limiting: {
+    safety_buffer: number;
+    buffer_percentage: number;
+    time_windows: {
+      minute: number;
+      day: number;
+      month: number;
+    };
+  };
 }
 
 export interface FunctionDeclarationConfig {

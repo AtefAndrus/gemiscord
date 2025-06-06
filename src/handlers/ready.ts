@@ -1,10 +1,10 @@
 // Discord ready event handler
 
 import { ActivityType } from "discord.js";
-import { configService } from "../bot.js";
+import { configManager, configService } from "../bot.js";
 import { IReadyHandler } from "../interfaces/handlers.js";
 import { ExtendedClient, ReadyData } from "../types/index.js";
-import { APP_INFO, MONITORING } from "../utils/constants.js";
+import { APP_INFO } from "../utils/constants.js";
 import { discordLogger as logger } from "../utils/logger.js";
 
 export class ReadyHandler implements IReadyHandler {
@@ -85,11 +85,12 @@ export class ReadyHandler implements IReadyHandler {
 
   setupHealthChecks(): void {
     logger.info("Setting up health checks...");
+    const config = configManager.getConfig();
 
     // Health check interval
     setInterval(() => {
       this.performHealthCheck();
-    }, MONITORING.HEALTH_CHECK_INTERVAL);
+    }, config.monitoring.intervals.health_check);
 
     // Initial health check
     this.performHealthCheck();
@@ -99,13 +100,14 @@ export class ReadyHandler implements IReadyHandler {
     try {
       const memoryUsage = process.memoryUsage();
       const heapUsed = memoryUsage.heapUsed;
+      const config = configManager.getConfig();
 
       // Check memory usage
-      if (heapUsed > MONITORING.MEMORY_CRITICAL_THRESHOLD) {
+      if (heapUsed > config.monitoring.thresholds.memory.critical) {
         logger.error(
           `Critical memory usage: ${Math.round(heapUsed / 1024 / 1024)}MB`
         );
-      } else if (heapUsed > MONITORING.MEMORY_WARNING_THRESHOLD) {
+      } else if (heapUsed > config.monitoring.thresholds.memory.warning) {
         logger.warn(
           `High memory usage: ${Math.round(heapUsed / 1024 / 1024)}MB`
         );
@@ -141,33 +143,39 @@ export class ReadyHandler implements IReadyHandler {
 
   private setBotActivity(client: ExtendedClient): void {
     if (!client.user) return;
+    const config = configManager.getConfig();
 
     // Set custom status
+    const initialActivity = config.ui.activity.messages[0]!.replace(
+      "{servers}",
+      client.guilds.cache.size.toString()
+    ).replace("{version}", APP_INFO.VERSION);
+
     client.user.setPresence({
       activities: [
         {
-          name: `${client.guilds.cache.size} servers | @mention for help`,
+          name: initialActivity,
           type: ActivityType.Watching,
         },
       ],
       status: "online",
     });
 
-    // Update activity every 5 minutes
+    // Update activity based on configured interval
     setInterval(() => {
       if (!client.user) return;
 
-      const activities = [
-        `${client.guilds.cache.size} servers | @mention for help`,
-        `Powered by Gemini AI`,
-        `v${APP_INFO.VERSION} | Search enabled`,
-      ];
+      const activities = config.ui.activity.messages.map((msg) =>
+        msg
+          .replace("{servers}", client.guilds.cache.size.toString())
+          .replace("{version}", APP_INFO.VERSION)
+      );
 
       const randomIndex = Math.floor(Math.random() * activities.length);
       const activity = activities[randomIndex]!;
 
       client.user?.setActivity(activity, { type: ActivityType.Playing });
-    }, 5 * 60 * 1000);
+    }, config.ui.activity.update_interval);
   }
 
   private async updateStartupStats(client: ExtendedClient): Promise<void> {

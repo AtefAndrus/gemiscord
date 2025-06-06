@@ -29,18 +29,9 @@ export const API_ENDPOINTS = {
 } as const;
 
 // Rate limiting constants
+// Note: Most rate limit values are now configurable via rate_limiting in bot-config.yaml
 export const RATE_LIMITS = {
-  // Model switch threshold (percentage)
-  SWITCH_THRESHOLD: 0.8, // Switch at 80% capacity
-
-  // Rate limit windows
-  WINDOWS: {
-    MINUTE: 60 * 1000, // 1 minute in ms
-    DAY: 24 * 60 * 60 * 1000, // 24 hours in ms
-  },
-
-  // Buffer for rate limit calculations
-  BUFFER_PERCENTAGE: 0.9, // Use 90% of actual limit
+  // Keep only non-configurable rate limit constants here
 } as const;
 
 // Cache TTL constants (in milliseconds)
@@ -83,7 +74,7 @@ export const DISCORD = {
 // Gemini-specific constants
 export const GEMINI = {
   // Default generation config
-  DEFAULT_TEMPERATURE: 0.9,
+  // Note: Temperature is now configurable via ai.temperature in bot-config.yaml
   DEFAULT_TOP_P: 0.95,
   DEFAULT_TOP_K: 40,
   DEFAULT_MAX_OUTPUT_TOKENS: 8192,
@@ -109,8 +100,7 @@ export const GEMINI = {
 // Search-specific constants
 export const SEARCH = {
   // Default search parameters
-  DEFAULT_COUNT: 5,
-  MAX_RESULTS: 20,
+  // Note: Default count and max results are now configurable via search.defaults in bot-config.yaml
   DEFAULT_REGION: "JP",
   DEFAULT_LANGUAGE: "ja",
   DEFAULT_SAFESEARCH: "moderate" as const,
@@ -119,7 +109,7 @@ export const SEARCH = {
   FREE_TIER_MONTHLY_LIMIT: 2000,
 
   // Search timeout
-  TIMEOUT: 10 * 1000, // 10 seconds
+  // Note: Timeout is now configurable via ai.timeout in bot-config.yaml
 } as const;
 
 // Message processing constants
@@ -194,14 +184,7 @@ export const DEFAULTS = {
 } as const;
 
 // Monitoring constants
+// Note: All monitoring values are now configurable via monitoring section in bot-config.yaml
 export const MONITORING = {
-  // Health check interval
-  HEALTH_CHECK_INTERVAL: 60 * 1000, // 1 minute
-
-  // Metrics collection
-  METRICS_INTERVAL: 5 * 60 * 1000, // 5 minutes
-
-  // Memory thresholds
-  MEMORY_WARNING_THRESHOLD: 100 * 1024 * 1024, // 100MB
-  MEMORY_CRITICAL_THRESHOLD: 150 * 1024 * 1024, // 150MB
+  // Keep only non-configurable monitoring constants here
 } as const;

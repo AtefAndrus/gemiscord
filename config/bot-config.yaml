@@ -65,3 +65,59 @@ constants:
       rate_limit_rpm: 1
       rate_limit_rpd: 1440 # 24 hours
       search_usage: 43200 # 30 days
+
+# UI/UX configuration
+ui:
+  activity:
+    update_interval: 300000 # 5 minutes
+    messages:
+      - "{servers} servers | @mention for help"
+      - "Powered by Gemini AI"
+      - "v{version} | Search enabled"
+  messaging:
+    split_delay: 1000 # 1 second between split messages
+    preview_length: 200
+  emojis:
+    success: "✅"
+    error: "❌"
+    warning: "⚠️"
+    search: "🔍"
+
+# Search and AI parameters
+search:
+  defaults:
+    count: 10 # Default search result count
+    max_results: 20 # Maximum results per query
+    display_count: 5 # Results shown in Discord
+  validation:
+    query:
+      min_length: 3
+      max_length: 200
+  formatting:
+    preview_length: 1900
+
+ai:
+  timeout: 10000 # 10 second API timeout
+  temperature: 0.9 # Default temperature setting
+
+# Monitoring and alerting
+monitoring:
+  thresholds:
+    usage:
+      warning: 0.7 # 70% usage warning
+      critical: 0.9 # 90% usage critical
+    memory:
+      warning: 104857600 # 100MB
+      critical: 157286400 # 150MB
+  intervals:
+    health_check: 60000 # 1 minute
+    metrics: 300000 # 5 minutes
+
+# Rate limiting enhancements
+rate_limiting:
+  safety_buffer: 0.8
+  buffer_percentage: 0.9
+  time_windows:
+    minute: 60000 # 1 minute in ms
+    day: 86400000 # 24 hours in ms
+    month: 2592000000 # 30 days in ms

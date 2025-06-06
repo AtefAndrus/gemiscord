@@ -4,32 +4,36 @@ import { ISearchService } from "../interfaces/services.js";
 import {
   BraveSearchRequest,
   BraveSearchResponse,
+  FormattedSearchResult,
   SearchQuery,
   SearchResponse,
-  FormattedSearchResult,
 } from "../types/search.types.js";
-import { ConfigService } from "./config.js";
-import { discordLogger as logger } from "../utils/logger.js";
 import { APIError } from "../utils/errors.js";
+import { discordLogger as logger } from "../utils/logger.js";
+import { ConfigService } from "./config.js";
+import { ConfigManager } from "./configManager.js";
 
 export class BraveSearchService implements ISearchService {
   private apiKey: string;
   private endpoint: string;
   private configService: ConfigService;
-  private readonly FREE_QUOTA = 2000; // Monthly free quota
+  private configManager: ConfigManager;
 
-  constructor(configService: ConfigService) {
+  constructor(configService: ConfigService, configManager: ConfigManager) {
     if (!process.env.BRAVE_SEARCH_API_KEY) {
       throw new APIError("BRAVE_SEARCH_API_KEY is not set");
     }
 
     this.apiKey = process.env.BRAVE_SEARCH_API_KEY;
-    this.endpoint = "https://api.search.brave.com/res/v1/web/search";
     this.configService = configService;
+    this.configManager = configManager;
+    const config = this.configManager.getConfig();
+    this.endpoint = config.api.brave_search.endpoint;
 
     logger.info("BraveSearchService initialized", {
       endpoint: this.endpoint,
       hasApiKey: !!this.apiKey,
+      freeQuota: config.api.brave_search.free_quota,
     });
   }
 
@@ -40,7 +44,12 @@ export class BraveSearchService implements ISearchService {
       logger.info("Brave Search service initialized successfully");
     } catch (error) {
       logger.error("Failed to initialize Brave Search service:", error);
-      throw new APIError("Failed to initialize Brave Search service", undefined, undefined, error);
+      throw new APIError(
+        "Failed to initialize Brave Search service",
+        undefined,
+        undefined,
+        error
+      );
     }
   }
 
@@ -56,7 +65,10 @@ export class BraveSearchService implements ISearchService {
       // Build request parameters
       const requestParams: BraveSearchRequest = {
         q: query.query,
-        count: Math.min(query.count || 10, 20), // Max 20 results
+        count: Math.min(
+          query.count || this.configManager.getConfig().search.defaults.count,
+          this.configManager.getConfig().search.defaults.max_results
+        ),
         country: this.mapRegionToCountry(query.region || "JP"),
         search_lang: this.mapRegionToLanguage(query.region || "JP"),
         ui_lang: this.mapRegionToLanguage(query.region || "JP"),
@@ -104,10 +116,17 @@ export class BraveSearchService implements ISearchService {
     }
   }
 
-  async getUsageStats(): Promise<{ monthlyUsage: number; remainingQueries: number }> {
+  async getUsageStats(): Promise<{
+    monthlyUsage: number;
+    remainingQueries: number;
+  }> {
+    const config = this.configManager.getConfig();
     try {
       const monthlyUsage = await this.configService.getSearchUsage();
-      const remainingQueries = Math.max(0, this.FREE_QUOTA - monthlyUsage);
+      const remainingQueries = Math.max(
+        0,
+        config.api.brave_search.free_quota - monthlyUsage
+      );
 
       return {
         monthlyUsage,
@@ -117,7 +136,7 @@ export class BraveSearchService implements ISearchService {
       logger.error("Failed to get usage stats:", error);
       return {
         monthlyUsage: 0,
-        remainingQueries: this.FREE_QUOTA,
+        remainingQueries: config.api.brave_search.free_quota,
       };
     }
   }
@@ -133,14 +152,19 @@ export class BraveSearchService implements ISearchService {
   }
 
   formatResultsForDiscord(results: SearchResponse): string {
+    const config = this.configManager.getConfig();
+
     if (results.results.length === 0) {
       return "検索結果が見つかりませんでした。";
     }
 
-    const lines = [`🔍 **"${results.query}"** の検索結果:\n`];
+    const lines = [
+      `${config.ui.emojis.search} **"${results.query}"** の検索結果:\n`,
+    ];
 
-    // Take top 5 results for Discord formatting
-    const topResults = results.results.slice(0, 5);
+    // Take top results based on config for Discord formatting
+    const displayCount = config.search.defaults.display_count;
+    const topResults = results.results.slice(0, displayCount);
 
     topResults.forEach((result, index) => {
       lines.push(`**${index + 1}.** [${result.title}](${result.url})`);
@@ -152,16 +176,21 @@ export class BraveSearchService implements ISearchService {
     });
 
     // Add footer
-    if (results.results.length > 5) {
-      lines.push(`他 ${results.results.length - 5} 件の結果があります。`);
+    if (results.results.length > displayCount) {
+      lines.push(
+        `他 ${results.results.length - displayCount} 件の結果があります。`
+      );
     }
 
-    return lines.join("\n").slice(0, 1900); // Discord limit
+    return lines.join("\n").slice(0, config.search.formatting.preview_length);
   }
 
-  private async makeApiCall(_query: string, params: BraveSearchRequest): Promise<BraveSearchResponse> {
+  private async makeApiCall(
+    _query: string,
+    params: BraveSearchRequest
+  ): Promise<BraveSearchResponse> {
     const url = new URL(this.endpoint);
-    
+
     // Add query parameters
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -169,14 +198,15 @@ export class BraveSearchService implements ISearchService {
       }
     });
 
+    const config = this.configManager.getConfig();
     const response = await fetch(url.toString(), {
       method: "GET",
       headers: {
         "X-Subscription-Token": this.apiKey,
-        "Accept": "application/json",
+        Accept: "application/json",
         "User-Agent": "Gemiscord/1.0",
       },
-      signal: AbortSignal.timeout(10000), // 10 second timeout
+      signal: AbortSignal.timeout(config.ai.timeout),
     });
 
     if (!response.ok) {
@@ -191,7 +221,9 @@ export class BraveSearchService implements ISearchService {
     return data;
   }
 
-  private formatResults(response: BraveSearchResponse): FormattedSearchResult[] {
+  private formatResults(
+    response: BraveSearchResponse
+  ): FormattedSearchResult[] {
     const results: FormattedSearchResult[] = [];
 
     // Process web results
@@ -239,7 +271,8 @@ export class BraveSearchService implements ISearchService {
       results.unshift({
         title: `📋 ${response.infobox.title}`,
         url: response.infobox.url,
-        description: response.infobox.description || response.infobox.long_desc || "",
+        description:
+          response.infobox.description || response.infobox.long_desc || "",
         thumbnail: response.infobox.thumbnail?.src,
       });
     }
@@ -287,27 +320,60 @@ export class BraveSearchService implements ISearchService {
     if (error instanceof Error) {
       // Check for rate limit errors
       if (error.message.includes("429")) {
-        return new APIError("Brave Search API rate limit exceeded", 429, this.endpoint, error);
+        return new APIError(
+          "Brave Search API rate limit exceeded",
+          429,
+          this.endpoint,
+          error
+        );
       }
 
       // Check for quota errors
       if (error.message.includes("403") || error.message.includes("quota")) {
-        return new APIError("Brave Search API quota exceeded", 403, this.endpoint, error);
+        return new APIError(
+          "Brave Search API quota exceeded",
+          403,
+          this.endpoint,
+          error
+        );
       }
 
       // Check for authentication errors
-      if (error.message.includes("401") || error.message.includes("unauthorized")) {
-        return new APIError("Brave Search API authentication failed", 401, this.endpoint, error);
+      if (
+        error.message.includes("401") ||
+        error.message.includes("unauthorized")
+      ) {
+        return new APIError(
+          "Brave Search API authentication failed",
+          401,
+          this.endpoint,
+          error
+        );
       }
 
       // Check for timeout errors
       if (error.message.includes("timeout") || error.name === "TimeoutError") {
-        return new APIError("Brave Search API timeout", 408, this.endpoint, error);
+        return new APIError(
+          "Brave Search API timeout",
+          408,
+          this.endpoint,
+          error
+        );
       }
 
-      return new APIError(`Brave Search API error: ${error.message}`, undefined, this.endpoint, error);
+      return new APIError(
+        `Brave Search API error: ${error.message}`,
+        undefined,
+        this.endpoint,
+        error
+      );
     }
 
-    return new APIError("Unknown Brave Search API error", undefined, this.endpoint, error);
+    return new APIError(
+      "Unknown Brave Search API error",
+      undefined,
+      this.endpoint,
+      error
+    );
   }
 }

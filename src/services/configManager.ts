@@ -2,7 +2,7 @@
 
 import { Tool, Type } from "@google/genai";
 import { readFile } from "fs/promises";
-import { join, isAbsolute } from "path";
+import { isAbsolute, join } from "path";
 import { parse } from "yaml";
 import { IConfigManager } from "../interfaces/services.js";
 import {
@@ -20,8 +20,8 @@ export class ConfigManager implements IConfigManager {
   private readonly baseConfigFile = "bot-config.yaml";
 
   constructor(configDir: string = "config") {
-    this.configPath = isAbsolute(configDir) 
-      ? configDir 
+    this.configPath = isAbsolute(configDir)
+      ? configDir
       : join(process.cwd(), configDir);
   }
 
@@ -145,6 +145,73 @@ export class ConfigManager implements IConfigManager {
             ...base.constants.cache.ttl_minutes,
             ...override.constants?.cache?.ttl_minutes,
           },
+        },
+      },
+      // UI/UX configuration
+      ui: {
+        activity: {
+          ...base.ui?.activity,
+          ...override.ui?.activity,
+          messages:
+            override.ui?.activity?.messages ||
+            base.ui?.activity?.messages ||
+            [],
+        },
+        messaging: {
+          ...base.ui?.messaging,
+          ...override.ui?.messaging,
+        },
+        emojis: {
+          ...base.ui?.emojis,
+          ...override.ui?.emojis,
+        },
+      },
+      // Search configuration
+      search: {
+        defaults: {
+          ...base.search?.defaults,
+          ...override.search?.defaults,
+        },
+        validation: {
+          query: {
+            ...base.search?.validation?.query,
+            ...override.search?.validation?.query,
+          },
+        },
+        formatting: {
+          ...base.search?.formatting,
+          ...override.search?.formatting,
+        },
+      },
+      // AI configuration
+      ai: {
+        ...base.ai,
+        ...override.ai,
+      },
+      // Monitoring configuration
+      monitoring: {
+        thresholds: {
+          usage: {
+            ...base.monitoring?.thresholds?.usage,
+            ...override.monitoring?.thresholds?.usage,
+          },
+          memory: {
+            ...base.monitoring?.thresholds?.memory,
+            ...override.monitoring?.thresholds?.memory,
+          },
+        },
+        intervals: {
+          ...base.monitoring?.intervals,
+          ...override.monitoring?.intervals,
+        },
+      },
+      // Rate limiting configuration
+      rate_limiting: {
+        ...base.rate_limiting,
+        ...override.rate_limiting,
+        time_windows: {
+          ...base.rate_limiting?.time_windows,
+          ...override.rate_limiting?.time_windows,
         },
       },
     };

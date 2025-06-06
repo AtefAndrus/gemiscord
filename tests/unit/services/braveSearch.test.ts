@@ -1,7 +1,9 @@
 // Unit tests for BraveSearchService
 
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { BraveSearchService } from "../../../src/services/braveSearch.js";
 import { ConfigService } from "../../../src/services/config.js";
+import { ConfigManager } from "../../../src/services/configManager.js";
 import {
   BraveSearchResponse,
   SearchQuery,
@@ -9,12 +11,42 @@ import {
 
 // Mock ConfigService
 const mockConfigService = {
-  getSearchUsage: jest.fn(),
-  incrementSearchUsage: jest.fn(),
+  getSearchUsage: mock(),
+  incrementSearchUsage: mock(),
 } as unknown as ConfigService;
 
+// Mock ConfigManager with required methods
+const mockConfigManager = {
+  getConfig: mock(() => ({
+    api: {
+      brave_search: {
+        endpoint: "https://api.search.brave.com/res/v1/web/search",
+        free_quota: 2000,
+      },
+    },
+    search: {
+      defaults: {
+        count: 10,
+        max_results: 20,
+        display_count: 5,
+      },
+      formatting: {
+        preview_length: 1900,
+      },
+    },
+    ui: {
+      emojis: {
+        search: "🔍",
+      },
+    },
+    ai: {
+      timeout: 10000,
+    },
+  })),
+} as unknown as ConfigManager;
+
 // Mock fetch globally
-const mockFetch = jest.fn();
+const mockFetch = mock();
 global.fetch = mockFetch as any;
 
 describe("BraveSearchService", () => {
@@ -25,11 +57,14 @@ describe("BraveSearchService", () => {
     // Set API key for tests
     process.env.BRAVE_SEARCH_API_KEY = "test-api-key";
 
-    // Reset all mocks
-    jest.clearAllMocks();
+    // Reset all mocks (Bun uses different API)
+    (mockConfigService.getSearchUsage as any).mockClear?.();
+    (mockConfigService.incrementSearchUsage as any).mockClear?.();
+    (mockConfigManager.getConfig as any).mockClear?.();
+    (mockFetch as any).mockClear?.();
 
     // Create new service instance
-    braveSearchService = new BraveSearchService(mockConfigService);
+    braveSearchService = new BraveSearchService(mockConfigService, mockConfigManager);
   });
 
   afterEach(() => {
@@ -50,7 +85,7 @@ describe("BraveSearchService", () => {
       delete process.env.BRAVE_SEARCH_API_KEY;
 
       expect(() => {
-        new BraveSearchService(mockConfigService);
+        new BraveSearchService(mockConfigService, mockConfigManager);
       }).toThrow("BRAVE_SEARCH_API_KEY is not set");
     });
   });

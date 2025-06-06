@@ -1,7 +1,7 @@
 // Discord message create event handler
 
 import { Message, TextChannel } from "discord.js";
-import { configService, configManager } from "../bot.js";
+import { configManager, configService } from "../bot.js";
 import { IMessageHandler } from "../interfaces/handlers.js";
 import { BraveSearchService } from "../services/braveSearch.js";
 import { GeminiService } from "../services/gemini.js";
@@ -30,11 +30,11 @@ export class MessageCreateHandler implements IMessageHandler {
   constructor() {
     this.messageProcessor = new MessageProcessor();
     this.geminiService = new GeminiService(configManager);
-    this.braveSearchService = new BraveSearchService(configService);
-    this.rateLimitService = new RateLimitService(
+    this.braveSearchService = new BraveSearchService(
       configService,
       configManager
     );
+    this.rateLimitService = new RateLimitService(configService, configManager);
   }
 
   async initialize(): Promise<void> {
@@ -244,6 +244,7 @@ export class MessageCreateHandler implements IMessageHandler {
         : baseSystemPrompt;
 
       // Prepare Gemini request
+      const config = configManager.getConfig();
       const geminiOptions: GeminiGenerateOptions = {
         model: availableModel,
         systemPrompt,
@@ -251,7 +252,7 @@ export class MessageCreateHandler implements IMessageHandler {
         functionCallingEnabled: searchAvailable,
         // TODO: Convert ProcessedAttachment to GeminiAttachment
         // attachments: context.attachments,
-        temperature: 0.9,
+        temperature: config.ai.temperature,
       };
 
       // Switch model if needed
@@ -286,7 +287,7 @@ export class MessageCreateHandler implements IMessageHandler {
             query: functionCall.args.query as string,
             region:
               (functionCall.args.region as "JP" | "US" | "global") || "JP",
-            count: 5,
+            count: config.search.defaults.count,
           };
 
           const searchResults = await this.braveSearchService.search(
@@ -368,6 +369,7 @@ export class MessageCreateHandler implements IMessageHandler {
     message: Message,
     response: string
   ): Promise<void> {
+    const config = configManager.getConfig();
     try {
       // Check Discord message limit (2000 characters)
       if (response.length <= 2000) {
@@ -377,7 +379,10 @@ export class MessageCreateHandler implements IMessageHandler {
         });
       } else {
         // Split message for long responses
-        const messageParts = this.splitMessage(response, 1900); // Leave room for formatting
+        const messageParts = this.splitMessage(
+          response,
+          config.ui.messaging.preview_length
+        );
 
         for (let i = 0; i < messageParts.length; i++) {
           const part = messageParts[i];
@@ -404,7 +409,9 @@ export class MessageCreateHandler implements IMessageHandler {
 
           // Small delay between messages to avoid rate limits
           if (i < messageParts.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise((resolve) =>
+              setTimeout(resolve, config.ui.messaging.split_delay)
+            );
           }
         }
       }
