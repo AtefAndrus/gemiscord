@@ -6,6 +6,7 @@
  */
 
 import { ChatInputCommandInteraction, Interaction } from "discord.js";
+import { configManager } from "../bot.js";
 import { ValidationError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -99,8 +100,16 @@ async function handleInteractionError(
     error: errorMessage,
   });
 
-  // Prepare error response
+  // Prepare error response following command's ephemeral setting
+  const ephemeral = configManager.getEphemeralSetting(interaction.commandName);
   const errorResponse = {
+    content:
+      "❌ An error occurred while processing your command. Please try again later.",
+    ephemeral,
+  };
+
+  // Follow-up errors are always ephemeral for consistency
+  const followUpErrorResponse = {
     content:
       "❌ An error occurred while processing your command. Please try again later.",
     ephemeral: true,
@@ -113,8 +122,8 @@ async function handleInteractionError(
     } else if (interaction.deferred) {
       await interaction.editReply(errorResponse);
     } else {
-      // Interaction already replied, send as follow-up
-      await interaction.followUp(errorResponse);
+      // Interaction already replied, send as follow-up (always ephemeral)
+      await interaction.followUp(followUpErrorResponse);
     }
   } catch (responseError) {
     logger.error("Failed to send error response:", responseError);
@@ -158,9 +167,10 @@ export async function sendPermissionDenied(
  */
 export async function deferWithLoading(
   interaction: ChatInputCommandInteraction,
-  message: string = "Processing..."
+  message: string = "Processing...",
+  ephemeral: boolean = true
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ ephemeral });
 
   // Optional: Edit with loading message
   await interaction.editReply(`⏳ ${message}`);

@@ -36,7 +36,8 @@ export async function handleStatusCommand(
     });
 
     // Defer reply for data gathering
-    await interaction.deferReply({ ephemeral: true });
+    const ephemeral = configManager.getEphemeralSetting("status");
+    await interaction.deferReply({ ephemeral });
 
     // Gather status information
     const statusData = await gatherStatusData();
@@ -58,7 +59,8 @@ export async function handleStatusCommand(
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage });
       } else {
-        await interaction.reply({ content: errorMessage, ephemeral: true });
+        const ephemeral = configManager.getEphemeralSetting("status");
+        await interaction.reply({ content: errorMessage, ephemeral });
       }
     } catch (replyError) {
       logger.error("Failed to send error response:", replyError);

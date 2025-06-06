@@ -17,6 +17,18 @@ export class ConfigService implements IConfigService {
   private keyv: Keyv;
 
   constructor(databaseUrl: string = "sqlite://config/bot.sqlite") {
+    // Ensure config directory exists
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const configDir = path.dirname(databaseUrl.replace("sqlite://", ""));
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true });
+      }
+    } catch (error) {
+      // Directory creation failed, continue with default initialization
+    }
+
     // Initialize Keyv with SQLite adapter
     const sqliteAdapter = new KeyvSqlite(databaseUrl);
     this.keyv = new Keyv({ store: sqliteAdapter });

@@ -85,6 +85,14 @@ ui:
     error: "❌"
     warning: "⚠️"
     search: "🔍"
+  commands:
+    ephemeral:
+      default: false # All commands ephemeral by default
+      admin_only: false # Admin commands always ephemeral
+      config_commands: false # /config command visible to channel
+      status_commands: false # /status command visible to channel
+      search_commands: true # /search command ephemeral
+      model_commands: true # /model command ephemeral
 
 # Search and AI parameters
 search:

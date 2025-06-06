@@ -222,7 +222,7 @@ describe("Interaction Create Handler Tests", () => {
       expect(errorTestInteraction.reply).toHaveBeenCalledWith({
         content:
           "❌ An error occurred while processing your command. Please try again later.",
-        ephemeral: true,
+        ephemeral: false, // status_commands: false
       });
 
       // Verify the mock command handler was called
@@ -265,7 +265,7 @@ describe("Interaction Create Handler Tests", () => {
       expect(deferredTestInteraction.editReply).toHaveBeenCalledWith({
         content:
           "❌ An error occurred while processing your command. Please try again later.",
-        ephemeral: true,
+        ephemeral: false, // status_commands: false
       });
 
       // Verify reply was NOT called

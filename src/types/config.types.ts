@@ -47,6 +47,16 @@ export interface YAMLConfig {
       warning: string;
       search: string;
     };
+    commands: {
+      ephemeral: {
+        default: boolean;
+        admin_only: boolean;
+        config_commands: boolean;
+        status_commands: boolean;
+        search_commands: boolean;
+        model_commands: boolean;
+      };
+    };
   };
 
   // Search and AI parameters

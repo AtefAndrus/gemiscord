@@ -165,6 +165,12 @@ export class ConfigManager implements IConfigManager {
           ...base.ui?.emojis,
           ...override.ui?.emojis,
         },
+        commands: {
+          ephemeral: {
+            ...base.ui?.commands?.ephemeral,
+            ...override.ui?.commands?.ephemeral,
+          },
+        },
       },
       // Search configuration
       search: {
@@ -203,6 +209,21 @@ export class ConfigManager implements IConfigManager {
         intervals: {
           ...base.monitoring?.intervals,
           ...override.monitoring?.intervals,
+        },
+      },
+      // Logging configuration
+      logging: {
+        file: {
+          ...base.logging?.file,
+          ...override.logging?.file,
+        },
+        rotation: {
+          ...base.logging?.rotation,
+          ...override.logging?.rotation,
+        },
+        performance: {
+          ...base.logging?.performance,
+          ...override.logging?.performance,
         },
       },
       // Rate limiting configuration
@@ -362,5 +383,34 @@ export class ConfigManager implements IConfigManager {
     logger.info("Reloading configuration...");
     this.config = null;
     await this.loadConfig();
+  }
+
+  /**
+   * Get ephemeral setting for a specific command type
+   */
+  getEphemeralSetting(commandType: string): boolean {
+    const config = this.getConfig();
+    const ephemeralConfig = config.ui.commands.ephemeral;
+
+    // Check specific command type settings
+    switch (commandType) {
+      case "config":
+        return ephemeralConfig.config_commands ?? ephemeralConfig.default;
+      case "status":
+        return ephemeralConfig.status_commands ?? ephemeralConfig.default;
+      case "search":
+        return ephemeralConfig.search_commands ?? ephemeralConfig.default;
+      case "model":
+        return ephemeralConfig.model_commands ?? ephemeralConfig.default;
+      default:
+        return ephemeralConfig.default;
+    }
+  }
+
+  /**
+   * Check if admin-only commands should always be ephemeral
+   */
+  isAdminCommandsEphemeral(): boolean {
+    return this.getConfig().ui.commands.ephemeral.admin_only;
   }
 }

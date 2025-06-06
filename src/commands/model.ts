@@ -8,7 +8,7 @@
  */
 
 import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
-import { configManager } from "../bot.js";
+import { configManager, configService } from "../bot.js";
 import {
   getSubcommand,
   hasAdminPermission,
@@ -55,7 +55,7 @@ export async function handleModelCommand(
         await interaction.reply({
           content:
             "❌ Unknown subcommand. Available: `info`, `stats`, `limits`.",
-          ephemeral: true,
+          ephemeral: configManager.getEphemeralSetting("model"),
         });
     }
   } catch (error) {
@@ -68,7 +68,10 @@ export async function handleModelCommand(
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage });
       } else {
-        await interaction.reply({ content: errorMessage, ephemeral: true });
+        await interaction.reply({
+          content: errorMessage,
+          ephemeral: configManager.getEphemeralSetting("model"),
+        });
       }
     } catch (replyError) {
       logger.error("Failed to send error response:", replyError);
@@ -82,7 +85,9 @@ export async function handleModelCommand(
 async function handleInfoSubcommand(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({
+    ephemeral: configManager.getEphemeralSetting("model"),
+  });
 
   try {
     const config = configManager.getConfig();
@@ -187,81 +192,99 @@ async function handleInfoSubcommand(
 async function handleStatsSubcommand(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({
+    ephemeral: configManager.getEphemeralSetting("model"),
+  });
 
   try {
-    // Note: These will be populated when service integration is complete
-    const mockStats = getMockModelStats();
+    // Get actual statistics from configService
+    const stats = await configService.getStats();
+    const config = configManager.getConfig();
+    const primaryModel =
+      config.api?.gemini?.models?.primary || "gemini-2.5-flash-preview-05-20";
+    const fallbackModel =
+      config.api?.gemini?.models?.fallback || "gemini-2.0-flash";
 
     const embed = new EmbedBuilder()
       .setTitle("📊 Model Usage Statistics")
       .setColor(0x00ff00)
       .setTimestamp()
-      .setFooter({ text: "Statistics for current month" });
+      .setFooter({ text: "Real-time statistics" });
+
+    // Get actual model usage from stats
+    const primaryUsage = stats.model_usage?.[primaryModel] || 0;
+    const fallbackUsage = stats.model_usage?.[fallbackModel] || 0;
+    const totalRequests = stats.total_requests || 0;
+    const searchUsage = stats.search_usage || 0;
 
     // Primary Model Stats
     embed.addFields({
-      name: "🥇 Primary Model Usage",
+      name: `🥇 ${primaryModel}`,
       value: [
-        `**Total Requests:** ${mockStats.primary.requests.toLocaleString()}`,
-        `**Total Tokens:** ${mockStats.primary.tokens.toLocaleString()}`,
-        `**Avg Response Time:** ${mockStats.primary.avgResponseTime}ms`,
-        `**Success Rate:** ${mockStats.primary.successRate}%`,
+        `**Requests:** ${primaryUsage.toLocaleString()}`,
+        `**Status:** ${primaryUsage > 0 ? "Active" : "Not used"}`,
+        `**Model Type:** Primary`,
       ].join("\n"),
       inline: true,
     });
 
     // Fallback Model Stats
     embed.addFields({
-      name: "🥈 Fallback Model Usage",
+      name: `🥈 ${fallbackModel}`,
       value: [
-        `**Total Requests:** ${mockStats.fallback.requests.toLocaleString()}`,
-        `**Total Tokens:** ${mockStats.fallback.tokens.toLocaleString()}`,
-        `**Avg Response Time:** ${mockStats.fallback.avgResponseTime}ms`,
-        `**Success Rate:** ${mockStats.fallback.successRate}%`,
+        `**Requests:** ${fallbackUsage.toLocaleString()}`,
+        `**Status:** ${fallbackUsage > 0 ? "Active" : "Not used"}`,
+        `**Model Type:** Fallback`,
       ].join("\n"),
       inline: true,
     });
 
     // Function Calling Stats
     embed.addFields({
-      name: "⚡ Function Calls",
+      name: "⚡ Function Usage",
       value: [
-        `**Web Search:** ${mockStats.functions.webSearch.toLocaleString()} calls`,
-        `**Character Count:** ${mockStats.functions.characterCount.toLocaleString()} calls`,
-        `**Total Functions:** ${mockStats.functions.total.toLocaleString()} calls`,
+        `**Search Calls:** ${searchUsage.toLocaleString()}`,
+        `**Total Requests:** ${totalRequests.toLocaleString()}`,
+        `**Function Ratio:** ${
+          totalRequests > 0
+            ? ((searchUsage / totalRequests) * 100).toFixed(1)
+            : 0
+        }%`,
       ].join("\n"),
       inline: true,
     });
 
-    // Performance Metrics
+    // API Configuration
+    const rateLimits = config.api.gemini.rate_limits;
+    const primaryLimits = rateLimits[primaryModel];
+
     embed.addFields({
-      name: "🎯 Performance",
+      name: "⚙️ Configuration",
       value: [
-        `**Model Switches:** ${mockStats.performance.modelSwitches}`,
-        `**Rate Limit Hits:** ${mockStats.performance.rateLimitHits}`,
-        `**Error Rate:** ${mockStats.performance.errorRate}%`,
-        `**Uptime:** ${mockStats.performance.uptime}%`,
+        `**Primary RPM:** ${primaryLimits?.rpm || "Unknown"}`,
+        `**Primary TPM:** ${primaryLimits?.tpm?.toLocaleString() || "Unknown"}`,
+        `**Models Available:** ${config.api.gemini.models.available.length}`,
       ].join("\n"),
       inline: true,
     });
 
-    // Daily Usage Trend
-    embed.addFields({
-      name: "📈 Today's Usage",
-      value: [
-        `**Requests:** ${mockStats.today.requests}`,
-        `**Peak Hour:** ${mockStats.today.peakHour}:00`,
-        `**Active Since:** ${mockStats.today.activeSince}`,
-      ].join("\n"),
-      inline: true,
-    });
+    // Recent Activity
+    const now = new Date();
+    const uptimeStart = process.uptime();
+    const startTime = new Date(now.getTime() - uptimeStart * 1000);
 
     embed.addFields({
-      name: "⚠️ Note",
-      value:
-        "Statistics are simulated during Phase 3 development. Real-time tracking will be available in production.",
-      inline: false,
+      name: "📈 Session Info",
+      value: [
+        `**Session Start:** <t:${Math.floor(startTime.getTime() / 1000)}:R>`,
+        `**Total Models:** ${Object.keys(stats.model_usage || {}).length}`,
+        `**Active Models:** ${
+          Object.values(stats.model_usage || {}).filter(
+            (usage: any) => usage > 0
+          ).length
+        }`,
+      ].join("\n"),
+      inline: true,
     });
 
     await interaction.editReply({ embeds: [embed] });
@@ -284,10 +307,13 @@ async function handleStatsSubcommand(
 async function handleLimitsSubcommand(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({
+    ephemeral: configManager.getEphemeralSetting("model"),
+  });
 
   try {
     const config = configManager.getConfig();
+    const stats = await configService.getStats();
     const primaryModel = config.api?.gemini?.models?.primary || "unknown";
     const fallbackModel = config.api?.gemini?.models?.fallback || "unknown";
 
@@ -295,26 +321,21 @@ async function handleLimitsSubcommand(
       .setTitle("⚖️ Rate Limits & Quotas")
       .setColor(0xffa500)
       .setTimestamp()
-      .setFooter({ text: "Current rate limit status" });
+      .setFooter({ text: "Configured rate limits" });
 
     // Primary Model Limits
     const rateLimits = config.api.gemini.rate_limits;
     const primaryRateLimit = rateLimits[primaryModel];
+    const primaryUsage = stats.model_usage?.[primaryModel] || 0;
+
     if (primaryRateLimit) {
-      const primaryUsage = getMockUsageData(primaryModel);
       embed.addFields({
         name: `🥇 ${primaryModel}`,
         value: [
-          `**RPM:** ${primaryUsage.rpm}/${primaryRateLimit.rpm || "Unknown"} (${
-            primaryUsage.rpmPercent
-          }%)`,
-          `**TPM:** ${primaryUsage.tpm}/${primaryRateLimit.tpm || "Unknown"} (${
-            primaryUsage.tpmPercent
-          }%)`,
-          `**RPD:** ${primaryUsage.rpd}/${primaryRateLimit.rpd || "Unknown"} (${
-            primaryUsage.rpdPercent
-          }%)`,
-          `**Status:** ${primaryUsage.status}`,
+          `**RPM Limit:** ${primaryRateLimit.rpm}`,
+          `**TPM Limit:** ${primaryRateLimit.tpm?.toLocaleString()}`,
+          `**RPD Limit:** ${primaryRateLimit.rpd}`,
+          `**Session Usage:** ${primaryUsage} requests`,
         ].join("\n"),
         inline: true,
       });
@@ -322,34 +343,29 @@ async function handleLimitsSubcommand(
 
     // Fallback Model Limits
     const fallbackRateLimit = rateLimits[fallbackModel];
+    const fallbackUsage = stats.model_usage?.[fallbackModel] || 0;
+
     if (fallbackRateLimit) {
-      const fallbackUsage = getMockUsageData(fallbackModel);
       embed.addFields({
         name: `🥈 ${fallbackModel}`,
         value: [
-          `**RPM:** ${fallbackUsage.rpm}/${
-            fallbackRateLimit.rpm || "Unknown"
-          } (${fallbackUsage.rpmPercent}%)`,
-          `**TPM:** ${fallbackUsage.tpm}/${
-            fallbackRateLimit.tpm || "Unknown"
-          } (${fallbackUsage.tpmPercent}%)`,
-          `**RPD:** ${fallbackUsage.rpd}/${
-            fallbackRateLimit.rpd || "Unknown"
-          } (${fallbackUsage.rpdPercent}%)`,
-          `**Status:** ${fallbackUsage.status}`,
+          `**RPM Limit:** ${fallbackRateLimit.rpm}`,
+          `**TPM Limit:** ${fallbackRateLimit.tpm?.toLocaleString()}`,
+          `**RPD Limit:** ${fallbackRateLimit.rpd}`,
+          `**Session Usage:** ${fallbackUsage} requests`,
         ].join("\n"),
         inline: true,
       });
     }
 
-    // Rate Limiting Info
+    // Rate Limiting Configuration
     embed.addFields({
       name: "🛡️ Rate Limiting",
       value: [
         "**RPM:** Requests per minute",
         "**TPM:** Tokens per minute",
         "**RPD:** Requests per day",
-        "**Safety Buffer:** 80% of limits used",
+        "**Auto-Switch:** Enabled when limits reached",
       ].join("\n"),
       inline: true,
     });
@@ -386,57 +402,4 @@ async function handleLimitsSubcommand(
         "❌ Failed to retrieve rate limit information. Please try again later.",
     });
   }
-}
-
-/**
- * Get mock model statistics (to be replaced with real data)
- */
-function getMockModelStats() {
-  return {
-    primary: {
-      requests: 1247,
-      tokens: 45821,
-      avgResponseTime: 1250,
-      successRate: 98.2,
-    },
-    fallback: {
-      requests: 89,
-      tokens: 3421,
-      avgResponseTime: 950,
-      successRate: 99.1,
-    },
-    functions: {
-      webSearch: 234,
-      characterCount: 567,
-      total: 801,
-    },
-    performance: {
-      modelSwitches: 12,
-      rateLimitHits: 3,
-      errorRate: 1.8,
-      uptime: 99.7,
-    },
-    today: {
-      requests: 89,
-      peakHour: 14,
-      activeSince: "08:00",
-    },
-  };
-}
-
-/**
- * Get mock usage data for a model (to be replaced with real data)
- */
-function getMockUsageData(modelName: string) {
-  const isHighUsage = modelName.includes("2.5"); // Simulate higher usage for primary model
-
-  return {
-    rpm: isHighUsage ? 8 : 2,
-    rpmPercent: isHighUsage ? 80 : 13,
-    tpm: isHighUsage ? 180000 : 45000,
-    tpmPercent: isHighUsage ? 72 : 9,
-    rpd: isHighUsage ? 387 : 89,
-    rpdPercent: isHighUsage ? 77 : 6,
-    status: isHighUsage ? "🟡 High Usage" : "✅ Normal",
-  };
 }

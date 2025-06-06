@@ -14,7 +14,7 @@ import {
   ChatInputCommandInteraction,
   EmbedBuilder,
 } from "discord.js";
-import { configService } from "../bot.js";
+import { configManager, configService } from "../bot.js";
 import {
   getChannelOption,
   getStringOption,
@@ -41,9 +41,10 @@ export async function handleConfigCommand(
 
     // Ensure we're in a guild
     if (!interaction.guild) {
+      const ephemeral = configManager.getEphemeralSetting("config");
       await interaction.reply({
         content: "❌ This command can only be used in a server.",
-        ephemeral: true,
+        ephemeral,
       });
       return;
     }
@@ -98,7 +99,8 @@ export async function handleConfigCommand(
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage });
       } else {
-        await interaction.reply({ content: errorMessage, ephemeral: true });
+        const ephemeral = configManager.getEphemeralSetting("config");
+        await interaction.reply({ content: errorMessage, ephemeral });
       }
     } catch (replyError) {
       logger.error("Failed to send error response:", replyError);
@@ -119,7 +121,8 @@ async function handleMentionSubcommand(
     throw new ValidationError('Action must be either "enable" or "disable"');
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  const ephemeral = configManager.getEphemeralSetting("config");
+  await interaction.deferReply({ ephemeral });
 
   const enabled = action === "enable";
   const currentConfig = await configService.getGuildConfig(guildId);
@@ -157,7 +160,8 @@ async function handleChannelSubcommand(
     throw new ValidationError("Please select a valid text channel");
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  const ephemeral = configManager.getEphemeralSetting("config");
+  await interaction.deferReply({ ephemeral });
 
   const currentConfig = await configService.getGuildConfig(guildId);
   const currentChannels = currentConfig.response_channels || [];
@@ -221,7 +225,8 @@ async function handlePromptSubcommand(
     );
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  const ephemeral = configManager.getEphemeralSetting("config");
+  await interaction.deferReply({ ephemeral });
 
   const currentConfig = await configService.getGuildConfig(guildId);
 
@@ -260,7 +265,8 @@ async function handleStrategySubcommand(
     throw new ValidationError('Strategy must be either "compress" or "split"');
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  const ephemeral = configManager.getEphemeralSetting("config");
+  await interaction.deferReply({ ephemeral });
 
   const currentConfig = await configService.getGuildConfig(guildId);
 
@@ -288,7 +294,8 @@ async function handleViewSubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  const ephemeral = configManager.getEphemeralSetting("config");
+  await interaction.deferReply({ ephemeral });
 
   try {
     const config = await configService.getGuildConfig(guildId);
@@ -381,19 +388,43 @@ async function createConfigEmbed(
   // Usage statistics
   try {
     const stats = await configService.getStats();
-    const totalRequests = stats.total_requests || 0;
     const searchUsage = await configService.getSearchUsage();
 
+    const totalRequests = stats.total_requests || 0;
+    const totalSearchUsage = stats.search_usage || 0;
+    const monthlySearchUsage = searchUsage || 0;
+
+    // Model usage details
+    const modelUsageText =
+      Object.keys(stats.model_usage || {}).length > 0
+        ? Object.entries(stats.model_usage)
+            .map(([model, count]) => `**${model}:** ${count}`)
+            .join("\n")
+        : "No model usage recorded";
+
+    embed.addFields(
+      {
+        name: "📊 Usage Statistics",
+        value: [
+          `**Total Requests:** ${totalRequests}`,
+          `**Search Queries (Total):** ${totalSearchUsage}`,
+          `**Search Queries (This Month):** ${monthlySearchUsage}`,
+        ].join("\n"),
+        inline: true,
+      },
+      {
+        name: "🤖 Model Usage",
+        value: modelUsageText,
+        inline: true,
+      }
+    );
+  } catch (error) {
+    logger.error("Failed to retrieve usage statistics:", error);
     embed.addFields({
       name: "📊 Usage Statistics",
-      value: [
-        `**Total Requests:** ${totalRequests}`,
-        `**Search Queries:** ${searchUsage}`,
-      ].join("\n"),
+      value: "❌ Unable to load statistics",
       inline: true,
     });
-  } catch (error) {
-    logger.warn("Failed to retrieve usage statistics:", error);
   }
 
   return embed;
