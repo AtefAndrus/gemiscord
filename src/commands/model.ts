@@ -14,7 +14,6 @@ import {
   hasAdminPermission,
   sendPermissionDenied,
 } from "../handlers/interactionCreate.js";
-import { GEMINI_MODELS } from "../types/gemini.types.js";
 import { logger } from "../utils/logger.js";
 
 /**
@@ -90,9 +89,10 @@ async function handleInfoSubcommand(
     const primaryModel = config.api?.gemini?.models?.primary || "unknown";
     const fallbackModel = config.api?.gemini?.models?.fallback || "unknown";
 
-    // Get model configuration details
-    const primaryModelConfig = GEMINI_MODELS[primaryModel];
-    const fallbackModelConfig = GEMINI_MODELS[fallbackModel];
+    // Get rate limit configuration from config
+    const rateLimits = config.api.gemini.rate_limits;
+    const primaryRateLimit = rateLimits[primaryModel];
+    const fallbackRateLimit = rateLimits[fallbackModel];
 
     const embed = new EmbedBuilder()
       .setTitle("🤖 AI Model Information")
@@ -115,35 +115,36 @@ async function handleInfoSubcommand(
     });
 
     // Primary Model Information
-    if (primaryModelConfig) {
+    if (primaryRateLimit) {
       embed.addFields({
         name: "🥇 Primary Model",
         value: [
           `**Name:** ${primaryModel}`,
-          `**RPM Limit:** ${primaryModelConfig.rateLimit?.rpm || "Unknown"}`,
-          `**TPM Limit:** ${primaryModelConfig.rateLimit?.tpm || "Unknown"}`,
-          `**RPD Limit:** ${primaryModelConfig.rateLimit?.rpd || "Unknown"}`,
+          `**RPM Limit:** ${primaryRateLimit.rpm || "Unknown"}`,
+          `**TPM Limit:** ${primaryRateLimit.tpm || "Unknown"}`,
+          `**RPD Limit:** ${primaryRateLimit.rpd || "Unknown"}`,
         ].join("\n"),
         inline: true,
       });
     }
 
     // Fallback Model Information
-    if (fallbackModelConfig) {
+    if (fallbackRateLimit) {
       embed.addFields({
         name: "🥈 Fallback Model",
         value: [
           `**Name:** ${fallbackModel}`,
-          `**RPM Limit:** ${fallbackModelConfig.rateLimit?.rpm || "Unknown"}`,
-          `**TPM Limit:** ${fallbackModelConfig.rateLimit?.tpm || "Unknown"}`,
-          `**RPD Limit:** ${fallbackModelConfig.rateLimit?.rpd || "Unknown"}`,
+          `**RPM Limit:** ${fallbackRateLimit.rpm || "Unknown"}`,
+          `**TPM Limit:** ${fallbackRateLimit.tpm || "Unknown"}`,
+          `**RPD Limit:** ${fallbackRateLimit.rpd || "Unknown"}`,
         ].join("\n"),
         inline: true,
       });
     }
 
     // Available Models
-    const availableModels = Object.keys(GEMINI_MODELS);
+    const availableModels =
+      configManager.getConfig().api.gemini.models.available;
     embed.addFields({
       name: "📋 Available Models",
       value:
@@ -297,21 +298,22 @@ async function handleLimitsSubcommand(
       .setFooter({ text: "Current rate limit status" });
 
     // Primary Model Limits
-    const primaryConfig = GEMINI_MODELS[primaryModel];
-    if (primaryConfig) {
+    const rateLimits = config.api.gemini.rate_limits;
+    const primaryRateLimit = rateLimits[primaryModel];
+    if (primaryRateLimit) {
       const primaryUsage = getMockUsageData(primaryModel);
       embed.addFields({
         name: `🥇 ${primaryModel}`,
         value: [
-          `**RPM:** ${primaryUsage.rpm}/${
-            primaryConfig.rateLimit?.rpm || "Unknown"
-          } (${primaryUsage.rpmPercent}%)`,
-          `**TPM:** ${primaryUsage.tpm}/${
-            primaryConfig.rateLimit?.tpm || "Unknown"
-          } (${primaryUsage.tpmPercent}%)`,
-          `**RPD:** ${primaryUsage.rpd}/${
-            primaryConfig.rateLimit?.rpd || "Unknown"
-          } (${primaryUsage.rpdPercent}%)`,
+          `**RPM:** ${primaryUsage.rpm}/${primaryRateLimit.rpm || "Unknown"} (${
+            primaryUsage.rpmPercent
+          }%)`,
+          `**TPM:** ${primaryUsage.tpm}/${primaryRateLimit.tpm || "Unknown"} (${
+            primaryUsage.tpmPercent
+          }%)`,
+          `**RPD:** ${primaryUsage.rpd}/${primaryRateLimit.rpd || "Unknown"} (${
+            primaryUsage.rpdPercent
+          }%)`,
           `**Status:** ${primaryUsage.status}`,
         ].join("\n"),
         inline: true,
@@ -319,20 +321,20 @@ async function handleLimitsSubcommand(
     }
 
     // Fallback Model Limits
-    const fallbackConfig = GEMINI_MODELS[fallbackModel];
-    if (fallbackConfig) {
+    const fallbackRateLimit = rateLimits[fallbackModel];
+    if (fallbackRateLimit) {
       const fallbackUsage = getMockUsageData(fallbackModel);
       embed.addFields({
         name: `🥈 ${fallbackModel}`,
         value: [
           `**RPM:** ${fallbackUsage.rpm}/${
-            fallbackConfig.rateLimit?.rpm || "Unknown"
+            fallbackRateLimit.rpm || "Unknown"
           } (${fallbackUsage.rpmPercent}%)`,
           `**TPM:** ${fallbackUsage.tpm}/${
-            fallbackConfig.rateLimit?.tpm || "Unknown"
+            fallbackRateLimit.tpm || "Unknown"
           } (${fallbackUsage.tpmPercent}%)`,
           `**RPD:** ${fallbackUsage.rpd}/${
-            fallbackConfig.rateLimit?.rpd || "Unknown"
+            fallbackRateLimit.rpd || "Unknown"
           } (${fallbackUsage.rpdPercent}%)`,
           `**Status:** ${fallbackUsage.status}`,
         ].join("\n"),

@@ -32,7 +32,8 @@ export class GeminiService implements IGeminiService {
 
     logger.info("GeminiService initialized", {
       defaultModel: this.currentModel,
-      modelsAvailable: Object.keys(GEMINI_MODELS),
+      modelsAvailable:
+        this.configManager.getConfig().api.gemini.models.available,
     });
   }
 
@@ -191,7 +192,11 @@ export class GeminiService implements IGeminiService {
   }
 
   switchModel(model: string): void {
-    if (!GEMINI_MODELS[model]) {
+    if (
+      !this.configManager
+        .getConfig()
+        .api.gemini.models.available.includes(model)
+    ) {
       throw new APIError(`Unsupported model: ${model}`);
     }
 

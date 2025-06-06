@@ -16,6 +16,10 @@ prompts:
 # Development-specific rate limits (more lenient)
 api:
   gemini:
+    models:
+      available:
+        - "gemini-2.5-flash-preview-05-20"
+        - "gemini-2.0-flash"
     rate_limits:
       "gemini-2.5-flash-preview-05-20":
         rpm: 5 # Lower for testing

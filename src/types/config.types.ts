@@ -147,6 +147,7 @@ export interface GeminiApiConfig {
   models: {
     primary: string;
     fallback: string;
+    available: string[];
   };
   rate_limits: {
     [model: string]: ModelRateLimit;

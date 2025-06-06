@@ -159,8 +159,8 @@ export interface ModelInfo {
 
 // Available models configuration
 export const GEMINI_MODELS: Record<string, ModelInfo> = {
-  "gemini-2.5-flash-preview-0520": {
-    name: "gemini-2.5-flash-preview-0520",
+  "gemini-2.5-flash-preview-05-20": {
+    name: "gemini-2.5-flash-preview-05-20",
     displayName: "Gemini 2.5 Flash Preview",
     contextWindow: 1048576,
     maxOutputTokens: 8192,
