@@ -1,5 +1,6 @@
 // E2E Integration tests for complete message flow
 
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { ExtendedClient } from "../../src/types/index.js";
 
 // Mock Discord.js components
@@ -11,12 +12,12 @@ const mockMessage = {
     id: "channel123",
     name: "test-channel",
     type: 0,
-    sendTyping: jest.fn(),
-    send: jest.fn(),
+    sendTyping: mock(),
+    send: mock(),
   },
   client: { user: { id: "bot123" } },
   mentions: { users: new Map() },
-  reply: jest.fn(),
+  reply: mock(),
 };
 
 const mockClient = {
@@ -33,27 +34,32 @@ describe("Message Flow Integration Tests", () => {
   let mockMessageProcessor: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Clear all mocks individually
+    (mockMessage.reply as any).mockClear();
+    (mockMessage.channel.sendTyping as any).mockClear();
+    (mockMessage.channel.send as any).mockClear();
 
     // Reset message mock
     mockMessage.content = "";
     mockMessage.mentions.users.clear();
-    mockMessage.reply = jest.fn();
-    mockMessage.channel.sendTyping = jest.fn();
-    mockMessage.channel.send = jest.fn();
+    mockMessage.reply = mock();
+    mockMessage.channel.sendTyping = mock();
+    mockMessage.channel.send = mock();
 
     // Create mock services
     mockConfigService = {
-      isMentionEnabled: jest.fn(),
-      isSearchEnabled: jest.fn(),
-      isResponseChannel: jest.fn(),
-      incrementStats: jest.fn(),
+      isMentionEnabled: mock(),
+      isSearchEnabled: mock(),
+      isResponseChannel: mock(),
+      incrementStats: mock(),
     };
 
     mockConfigManager = {
-      loadConfig: jest.fn().mockResolvedValue(undefined),
-      getBaseSystemPrompt: jest.fn().mockReturnValue("You are a helpful AI assistant."),
-      getConfig: jest.fn().mockReturnValue({
+      loadConfig: mock().mockResolvedValue(undefined),
+      getBaseSystemPrompt: mock().mockReturnValue(
+        "You are a helpful AI assistant."
+      ),
+      getConfig: mock().mockReturnValue({
         api: {
           gemini: {
             models: {
@@ -66,29 +72,29 @@ describe("Message Flow Integration Tests", () => {
     };
 
     mockGeminiService = {
-      initialize: jest.fn().mockResolvedValue(undefined),
-      generateContent: jest.fn(),
-      switchModel: jest.fn(),
-      executeFunction: jest.fn(),
-      getCurrentModel: jest.fn().mockReturnValue("gemini-2.0-flash"),
+      initialize: mock().mockResolvedValue(undefined),
+      generateContent: mock(),
+      switchModel: mock(),
+      executeFunction: mock(),
+      getCurrentModel: mock().mockReturnValue("gemini-2.0-flash"),
     };
 
     mockBraveSearchService = {
-      initialize: jest.fn().mockResolvedValue(undefined),
-      search: jest.fn(),
-      formatResultsForDiscord: jest.fn(),
+      initialize: mock().mockResolvedValue(undefined),
+      search: mock(),
+      formatResultsForDiscord: mock(),
     };
 
     mockRateLimitService = {
-      initialize: jest.fn().mockResolvedValue(undefined),
-      getAvailableModel: jest.fn(),
-      isSearchAvailable: jest.fn(),
-      updateCounters: jest.fn(),
+      initialize: mock().mockResolvedValue(undefined),
+      getAvailableModel: mock(),
+      isSearchAvailable: mock(),
+      updateCounters: mock(),
     };
 
     mockMessageProcessor = {
-      shouldProcess: jest.fn().mockResolvedValue(true),
-      sanitizeContent: jest.fn((content) => content),
+      shouldProcess: mock().mockResolvedValue(true),
+      sanitizeContent: mock((content) => content),
     };
 
     // Create a mock handler that simulates the MessageCreateHandler behavior
@@ -99,25 +105,42 @@ describe("Message Flow Integration Tests", () => {
       configManager: mockConfigManager,
       configService: mockConfigService,
       messageProcessor: mockMessageProcessor,
-      
+
       // Mock the execute method that contains the main logic
       async execute(client: any, message: any) {
         // Check if message should be processed
-        const shouldProcess = await this.messageProcessor.shouldProcess(message);
+        const shouldProcess = await this.messageProcessor.shouldProcess(
+          message
+        );
         if (!shouldProcess) return;
 
         // Check if this is a mention or auto-response channel
         const isMention = message.mentions.users.has(client.user.id);
-        const isAutoResponse = !isMention && await this.configService.isResponseChannel(message.guild.id, message.channel.id);
-        
+        const isAutoResponse =
+          !isMention &&
+          (await this.configService.isResponseChannel(
+            message.guild.id,
+            message.channel.id
+          ));
+
         if (!isMention && !isAutoResponse) return;
-        
+
         // Check if mentions are enabled
-        if (isMention && !(await this.configService.isMentionEnabled(message.guild.id))) return;
+        if (
+          isMention &&
+          !(await this.configService.isMentionEnabled(message.guild.id))
+        )
+          return;
 
         // Handle simple mention greeting
-        if (isMention && (message.content.trim() === `<@${client.user.id}>` || message.content.trim() === `@${client.user.id}`)) {
-          await message.reply("こんにちは！何かお手伝いできることはありますか？ 😊");
+        if (
+          isMention &&
+          (message.content.trim() === `<@${client.user.id}>` ||
+            message.content.trim() === `@${client.user.id}`)
+        ) {
+          await message.reply(
+            "こんにちは！何かお手伝いできることはありますか？ 😊"
+          );
           return;
         }
 
@@ -125,7 +148,8 @@ describe("Message Flow Integration Tests", () => {
         const availableModel = await this.rateLimitService.getAvailableModel();
         if (!availableModel) {
           await message.reply({
-            content: "申し訳ございません。現在利用量が上限に達しています。しばらくしてから再度お試しください。",
+            content:
+              "申し訳ございません。現在利用量が上限に達しています。しばらくしてから再度お試しください。",
             allowedMentions: { repliedUser: true },
           });
           return;
@@ -136,8 +160,11 @@ describe("Message Flow Integration Tests", () => {
           this.geminiService.switchModel(availableModel);
 
           // Get search availability
-          const searchEnabled = await this.configService.isSearchEnabled(message.guild.id);
-          const searchAvailable = await this.rateLimitService.isSearchAvailable();
+          const searchEnabled = await this.configService.isSearchEnabled(
+            message.guild.id
+          );
+          const searchAvailable =
+            await this.rateLimitService.isSearchAvailable();
 
           // Generate initial response
           const response = await this.geminiService.generateContent({
@@ -148,7 +175,7 @@ describe("Message Flow Integration Tests", () => {
           });
 
           let finalText = response.text;
-          
+
           // Handle function calls
           if (response.functionCalls && response.functionCalls.length > 0) {
             for (const functionCall of response.functionCalls) {
@@ -159,19 +186,24 @@ describe("Message Flow Integration Tests", () => {
                   region: functionCall.args.region || "JP",
                   count: 5,
                 });
-                
+
                 // Generate final response with search results
                 const finalResponse = await this.geminiService.generateContent({
                   model: availableModel,
                   systemPrompt: this.configManager.getBaseSystemPrompt(),
-                  userMessage: `検索結果: ${this.braveSearchService.formatResultsForDiscord(searchResult)}`,
+                  userMessage: `検索結果: ${this.braveSearchService.formatResultsForDiscord(
+                    searchResult
+                  )}`,
                   functionCallingEnabled: false,
                 });
                 finalText = finalResponse.text;
               } else if (functionCall.name === "count_characters") {
                 // Execute character count
-                const result = await this.geminiService.executeFunction(functionCall.name, functionCall.args);
-                
+                const result = await this.geminiService.executeFunction(
+                  functionCall.name,
+                  functionCall.args
+                );
+
                 // Generate final response with count results
                 const finalResponse = await this.geminiService.generateContent({
                   model: availableModel,
@@ -200,22 +232,26 @@ describe("Message Flow Integration Tests", () => {
             // Split long messages
             const firstPart = finalText.substring(0, 1900);
             const remainingPart = finalText.substring(1900);
-            
+
             await message.reply({
               content: firstPart,
               allowedMentions: { repliedUser: true },
             });
-            
+
             if (remainingPart) {
               await message.channel.send(remainingPart);
             }
           }
 
           // Update stats
-          await this.configService.incrementStats(message.guild.id, 'messages_processed');
-
+          await this.configService.incrementStats(
+            message.guild.id,
+            "messages_processed"
+          );
         } catch (error) {
-          await message.reply("申し訳ございません。エラーが発生しました。しばらくしてから再度お試しください。");
+          await message.reply(
+            "申し訳ございません。エラーが発生しました。しばらくしてから再度お試しください。"
+          );
         }
       },
 
@@ -223,7 +259,7 @@ describe("Message Flow Integration Tests", () => {
         await this.geminiService.initialize();
         await this.braveSearchService.initialize();
         await this.rateLimitService.initialize();
-      }
+      },
     };
   });
 
@@ -234,25 +270,20 @@ describe("Message Flow Integration Tests", () => {
       mockMessage.mentions.users.set("bot123", {} as any);
 
       // Mock config service responses
-      mockConfigService.isMentionEnabled = jest.fn().mockResolvedValue(true);
-      mockConfigService.isSearchEnabled = jest.fn().mockResolvedValue(true);
-      mockConfigService.incrementStats = jest.fn().mockResolvedValue(undefined);
+      mockConfigService.isMentionEnabled = mock().mockResolvedValue(true);
+      mockConfigService.isSearchEnabled = mock().mockResolvedValue(true);
+      mockConfigService.incrementStats = mock().mockResolvedValue(undefined);
     });
 
     it("should handle simple text response without function calling", async () => {
       // Mock rate limit check
-      mockRateLimitService.getAvailableModel = jest
-        .fn()
-        .mockResolvedValue("gemini-2.0-flash");
-      mockRateLimitService.isSearchAvailable = jest
-        .fn()
-        .mockResolvedValue(true);
-      mockRateLimitService.updateCounters = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      mockRateLimitService.getAvailableModel =
+        mock().mockResolvedValue("gemini-2.0-flash");
+      mockRateLimitService.isSearchAvailable = mock().mockResolvedValue(true);
+      mockRateLimitService.updateCounters = mock().mockResolvedValue(undefined);
 
       // Mock Gemini response (no function call)
-      mockGeminiService.generateContent = jest.fn().mockResolvedValue({
+      mockGeminiService.generateContent = mock().mockResolvedValue({
         text: "Hello! I'm doing well, thank you for asking. How can I help you today?",
         functionCalls: [],
         usage: { totalTokens: 50 },
@@ -273,19 +304,13 @@ describe("Message Flow Integration Tests", () => {
       mockMessage.content = "@bot123 What's the weather like in Tokyo today?";
 
       // Mock rate limit checks
-      mockRateLimitService.getAvailableModel = jest
-        .fn()
-        .mockResolvedValue("gemini-2.0-flash");
-      mockRateLimitService.isSearchAvailable = jest
-        .fn()
-        .mockResolvedValue(true);
-      mockRateLimitService.updateCounters = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      mockRateLimitService.getAvailableModel =
+        mock().mockResolvedValue("gemini-2.0-flash");
+      mockRateLimitService.isSearchAvailable = mock().mockResolvedValue(true);
+      mockRateLimitService.updateCounters = mock().mockResolvedValue(undefined);
 
       // Mock Gemini first response (with function call)
-      mockGeminiService.generateContent = jest
-        .fn()
+      mockGeminiService.generateContent = mock()
         .mockResolvedValueOnce({
           text: null,
           functionCalls: [
@@ -303,7 +328,7 @@ describe("Message Flow Integration Tests", () => {
         });
 
       // Mock search service
-      mockBraveSearchService.search = jest.fn().mockResolvedValue({
+      mockBraveSearchService.search = mock().mockResolvedValue({
         query: "Tokyo weather today",
         region: "JP",
         totalResults: 3,
@@ -316,9 +341,9 @@ describe("Message Flow Integration Tests", () => {
           },
         ],
       });
-      mockBraveSearchService.formatResultsForDiscord = jest
-        .fn()
-        .mockReturnValue("🔍 Tokyo weather: Sunny, 25°C");
+      mockBraveSearchService.formatResultsForDiscord = mock().mockReturnValue(
+        "🔍 Tokyo weather: Sunny, 25°C"
+      );
 
       await handler.execute(mockClient, mockMessage as any);
 
@@ -340,19 +365,13 @@ describe("Message Flow Integration Tests", () => {
         "@bot123 Count the characters in this text: Hello World";
 
       // Mock rate limit checks
-      mockRateLimitService.getAvailableModel = jest
-        .fn()
-        .mockResolvedValue("gemini-2.0-flash");
-      mockRateLimitService.isSearchAvailable = jest
-        .fn()
-        .mockResolvedValue(false);
-      mockRateLimitService.updateCounters = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      mockRateLimitService.getAvailableModel =
+        mock().mockResolvedValue("gemini-2.0-flash");
+      mockRateLimitService.isSearchAvailable = mock().mockResolvedValue(false);
+      mockRateLimitService.updateCounters = mock().mockResolvedValue(undefined);
 
       // Mock Gemini responses
-      mockGeminiService.generateContent = jest
-        .fn()
+      mockGeminiService.generateContent = mock()
         .mockResolvedValueOnce({
           text: null,
           functionCalls: [
@@ -370,7 +389,7 @@ describe("Message Flow Integration Tests", () => {
         });
 
       // Mock function execution
-      mockGeminiService.executeFunction = jest.fn().mockResolvedValue({
+      mockGeminiService.executeFunction = mock().mockResolvedValue({
         characterCount: 11,
         text: "Hello World",
       });
@@ -390,9 +409,7 @@ describe("Message Flow Integration Tests", () => {
 
     it("should handle rate limit exceeded", async () => {
       // Mock rate limit exceeded
-      mockRateLimitService.getAvailableModel = jest
-        .fn()
-        .mockResolvedValue(null);
+      mockRateLimitService.getAvailableModel = mock().mockResolvedValue(null);
 
       await handler.execute(mockClient, mockMessage as any);
 
@@ -406,17 +423,14 @@ describe("Message Flow Integration Tests", () => {
 
     it("should handle API errors gracefully", async () => {
       // Mock rate limit check
-      mockRateLimitService.getAvailableModel = jest
-        .fn()
-        .mockResolvedValue("gemini-2.0-flash");
-      mockRateLimitService.isSearchAvailable = jest
-        .fn()
-        .mockResolvedValue(true);
+      mockRateLimitService.getAvailableModel =
+        mock().mockResolvedValue("gemini-2.0-flash");
+      mockRateLimitService.isSearchAvailable = mock().mockResolvedValue(true);
 
       // Mock Gemini error
-      mockGeminiService.generateContent = jest
-        .fn()
-        .mockRejectedValue(new Error("API Error"));
+      mockGeminiService.generateContent = mock().mockRejectedValue(
+        new Error("API Error")
+      );
 
       await handler.execute(mockClient, mockMessage as any);
 
@@ -431,26 +445,21 @@ describe("Message Flow Integration Tests", () => {
       mockMessage.content = "What's the latest news?";
       // No mention, but auto-response channel
 
-      mockConfigService.isMentionEnabled = jest.fn().mockResolvedValue(true);
-      mockConfigService.isSearchEnabled = jest.fn().mockResolvedValue(true);
-      mockConfigService.isResponseChannel = jest.fn().mockResolvedValue(true);
-      mockConfigService.incrementStats = jest.fn().mockResolvedValue(undefined);
+      mockConfigService.isMentionEnabled = mock().mockResolvedValue(true);
+      mockConfigService.isSearchEnabled = mock().mockResolvedValue(true);
+      mockConfigService.isResponseChannel = mock().mockResolvedValue(true);
+      mockConfigService.incrementStats = mock().mockResolvedValue(undefined);
     });
 
     it("should handle auto-response in configured channel", async () => {
       // Mock rate limit check
-      mockRateLimitService.getAvailableModel = jest
-        .fn()
-        .mockResolvedValue("gemini-2.0-flash");
-      mockRateLimitService.isSearchAvailable = jest
-        .fn()
-        .mockResolvedValue(true);
-      mockRateLimitService.updateCounters = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      mockRateLimitService.getAvailableModel =
+        mock().mockResolvedValue("gemini-2.0-flash");
+      mockRateLimitService.isSearchAvailable = mock().mockResolvedValue(true);
+      mockRateLimitService.updateCounters = mock().mockResolvedValue(undefined);
 
       // Mock Gemini response
-      mockGeminiService.generateContent = jest.fn().mockResolvedValue({
+      mockGeminiService.generateContent = mock().mockResolvedValue({
         text: "Here are today's top news headlines...",
         functionCalls: [],
         usage: { totalTokens: 60 },
@@ -469,7 +478,7 @@ describe("Message Flow Integration Tests", () => {
     });
 
     it("should not respond in non-configured channel", async () => {
-      mockConfigService.isResponseChannel = jest.fn().mockResolvedValue(false);
+      mockConfigService.isResponseChannel = mock().mockResolvedValue(false);
 
       await handler.execute(mockClient, mockMessage as any);
 
@@ -483,26 +492,21 @@ describe("Message Flow Integration Tests", () => {
       mockMessage.content = "@bot123 Tell me a very long story";
       mockMessage.mentions.users.set("bot123", {} as any);
 
-      mockConfigService.isMentionEnabled = jest.fn().mockResolvedValue(true);
-      mockConfigService.isSearchEnabled = jest.fn().mockResolvedValue(true);
-      mockConfigService.incrementStats = jest.fn().mockResolvedValue(undefined);
+      mockConfigService.isMentionEnabled = mock().mockResolvedValue(true);
+      mockConfigService.isSearchEnabled = mock().mockResolvedValue(true);
+      mockConfigService.incrementStats = mock().mockResolvedValue(undefined);
     });
 
     it("should split long messages correctly", async () => {
       // Mock rate limit check
-      mockRateLimitService.getAvailableModel = jest
-        .fn()
-        .mockResolvedValue("gemini-2.0-flash");
-      mockRateLimitService.isSearchAvailable = jest
-        .fn()
-        .mockResolvedValue(true);
-      mockRateLimitService.updateCounters = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      mockRateLimitService.getAvailableModel =
+        mock().mockResolvedValue("gemini-2.0-flash");
+      mockRateLimitService.isSearchAvailable = mock().mockResolvedValue(true);
+      mockRateLimitService.updateCounters = mock().mockResolvedValue(undefined);
 
       // Mock very long response
       const longResponse = "Very long story... ".repeat(200); // Over 2000 chars
-      mockGeminiService.generateContent = jest.fn().mockResolvedValue({
+      mockGeminiService.generateContent = mock().mockResolvedValue({
         text: longResponse,
         functionCalls: [],
         usage: { totalTokens: 500 },
@@ -521,7 +525,7 @@ describe("Message Flow Integration Tests", () => {
       mockMessage.content = "@bot123";
       mockMessage.mentions.users.set("bot123", {} as any);
 
-      mockConfigService.isMentionEnabled = jest.fn().mockResolvedValue(true);
+      mockConfigService.isMentionEnabled = mock().mockResolvedValue(true);
 
       await handler.execute(mockClient, mockMessage as any);
 
@@ -535,7 +539,7 @@ describe("Message Flow Integration Tests", () => {
       mockMessage.content = "@bot123 Hello";
       mockMessage.mentions.users.set("bot123", {} as any);
 
-      mockConfigService.isMentionEnabled = jest.fn().mockResolvedValue(false);
+      mockConfigService.isMentionEnabled = mock().mockResolvedValue(false);
 
       await handler.execute(mockClient, mockMessage as any);
 

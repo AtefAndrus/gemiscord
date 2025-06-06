@@ -1,11 +1,11 @@
 // Unit tests for Gemini service
 
-import { ConfigManager } from "../../../src/services/configManager.js";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { GeminiService } from "../../../src/services/gemini.js";
 
 describe("GeminiService", () => {
   let geminiService: GeminiService;
-  let mockConfigManager: jest.Mocked<ConfigManager>;
+  let mockConfigManager: any;
 
   beforeEach(() => {
     // Set environment variable
@@ -13,7 +13,7 @@ describe("GeminiService", () => {
 
     // Create mock ConfigManager
     mockConfigManager = {
-      getConfig: jest.fn().mockReturnValue({
+      getConfig: mock().mockReturnValue({
         api: {
           gemini: {
             models: {
@@ -23,7 +23,7 @@ describe("GeminiService", () => {
           },
         },
       }),
-      getSearchFunctionDeclaration: jest.fn().mockReturnValue({
+      getSearchFunctionDeclaration: mock().mockReturnValue({
         functionDeclarations: [
           {
             name: "search_web",
@@ -39,7 +39,7 @@ describe("GeminiService", () => {
           },
         ],
       }),
-      getCharacterCountFunctionDeclaration: jest.fn().mockReturnValue({
+      getCharacterCountFunctionDeclaration: mock().mockReturnValue({
         functionDeclarations: [
           {
             name: "count_characters",
@@ -60,7 +60,12 @@ describe("GeminiService", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    // Clear all mocks individually
+    Object.values(mockConfigManager).forEach((mockFn) => {
+      if (typeof mockFn === "function") {
+        (mockFn as any).mockClear();
+      }
+    });
     delete process.env.GEMINI_API_KEY;
   });
 

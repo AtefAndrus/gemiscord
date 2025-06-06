@@ -262,3 +262,116 @@ export function formatBytes(bytes: number): string {
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
+
+// ============================================================================
+// Dependency Injection Infrastructure for Testing
+// ============================================================================
+
+/**
+ * Interface for command handlers - used for dependency injection in tests
+ */
+export interface CommandHandlers {
+  handleStatusCommand: (
+    interaction: ChatInputCommandInteraction
+  ) => Promise<void>;
+  handleConfigCommand: (
+    interaction: ChatInputCommandInteraction
+  ) => Promise<void>;
+  handleSearchCommand: (
+    interaction: ChatInputCommandInteraction
+  ) => Promise<void>;
+  handleModelCommand: (
+    interaction: ChatInputCommandInteraction
+  ) => Promise<void>;
+}
+
+/**
+ * Default command handlers using static imports
+ */
+const defaultHandlers: CommandHandlers = {
+  handleStatusCommand,
+  handleConfigCommand,
+  handleSearchCommand,
+  handleModelCommand,
+};
+
+/**
+ * Route slash commands to their respective handlers with dependency injection support
+ */
+async function routeCommandWithDI(
+  interaction: ChatInputCommandInteraction,
+  handlers: CommandHandlers = defaultHandlers
+): Promise<void> {
+  const { commandName } = interaction;
+
+  switch (commandName) {
+    case "status":
+      await handlers.handleStatusCommand(interaction);
+      break;
+
+    case "config":
+      await handlers.handleConfigCommand(interaction);
+      break;
+
+    case "search":
+      await handlers.handleSearchCommand(interaction);
+      break;
+
+    case "model":
+      await handlers.handleModelCommand(interaction);
+      break;
+
+    default:
+      logger.warn(`Unknown command: ${commandName}`);
+      await interaction.reply({
+        content: `❌ Unknown command: \`/${commandName}\`. Please check available commands.`,
+        ephemeral: true,
+      });
+  }
+}
+
+/**
+ * Create a testable interaction handler with dependency injection support
+ * This function enables testing by allowing mock command handlers to be injected
+ */
+export function createTestableInteractionHandler(
+  handlers?: Partial<CommandHandlers>
+) {
+  const mergedHandlers: CommandHandlers = {
+    ...defaultHandlers,
+    ...handlers,
+  };
+
+  return async function handleInteractionCreate(
+    interaction: Interaction
+  ): Promise<void> {
+    try {
+      // Only handle slash command interactions
+      if (!interaction.isChatInputCommand()) {
+        logger.debug("Received non-command interaction, ignoring");
+        return;
+      }
+
+      // Log interaction details
+      logger.info(`Slash command received: /${interaction.commandName}`, {
+        userId: interaction.user.id,
+        guildId: interaction.guild?.id,
+        channelId: interaction.channel?.id,
+        commandName: interaction.commandName,
+        subcommand: interaction.options.getSubcommand(false),
+      });
+
+      // Route to appropriate command handler using DI
+      await routeCommandWithDI(
+        interaction as ChatInputCommandInteraction,
+        mergedHandlers
+      );
+    } catch (error) {
+      logger.error("Error handling interaction:", error);
+      await handleInteractionError(
+        interaction as ChatInputCommandInteraction,
+        error
+      );
+    }
+  };
+}

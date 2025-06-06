@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import {
   botLogger,
   configLogger,
@@ -7,11 +8,11 @@ import {
 
 // Mock console methods for testing
 const mockConsole = {
-  log: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
+  log: mock(),
+  info: mock(),
+  warn: mock(),
+  error: mock(),
+  debug: mock(),
 };
 
 // Store original console
@@ -21,7 +22,8 @@ describe("Logger", () => {
   beforeEach(() => {
     // Replace console methods with mocks
     Object.assign(console, mockConsole);
-    jest.clearAllMocks();
+    // Clear all mocks individually
+    Object.values(mockConsole).forEach((mockFn) => (mockFn as any).mockClear());
   });
 
   afterEach(() => {

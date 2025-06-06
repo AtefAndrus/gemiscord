@@ -32,8 +32,8 @@ bun test tests/unit/services/gemini.test.ts
 
 **Bun Native Test Runner** - 100x faster than Jest with full compatibility
 
-- **Jest Compatibility**: `jest.fn()`, `jest.spyOn()`, `expect()`, `describe()`, `it()`
-- **No Jest Module Mocking**: Use direct mocking with `jest.fn()` instead
+- **Jest-Like API**: `mock()`, `mock.spyOn()`, `expect()`, `describe()`, `it()` (Note: Must import from `bun:test`)
+- **No Jest Module Mocking**: Use direct mocking with `mock()` instead
 - **Native Performance**: ~400ms for full test suite execution
 - **Built-in Coverage**: No additional configuration needed
 
@@ -105,15 +105,18 @@ describe("Service Integration", () => {
 ### Service Mocking (Recommended)
 
 ```typescript
-// Create mocks directly with jest.fn()
+// Import mock from bun:test
+import { mock } from "bun:test";
+
+// Create mocks directly with mock()
 const mockGeminiService = {
-  initialize: jest.fn().mockResolvedValue(undefined),
-  generateContent: jest.fn().mockResolvedValue({
+  initialize: mock().mockResolvedValue(undefined),
+  generateContent: mock().mockResolvedValue({
     text: "Mock response",
     functionCalls: [],
     usage: { totalTokens: 50 },
   }),
-  switchModel: jest.fn(),
+  switchModel: mock(),
 };
 
 // Inject mocks via dependency injection
@@ -124,8 +127,11 @@ const handler = new MessageCreateHandler();
 ### API Mocking
 
 ```typescript
+// Import mock from bun:test
+import { mock } from "bun:test";
+
 // Mock fetch globally for API tests
-global.fetch = jest.fn().mockResolvedValue({
+global.fetch = mock().mockResolvedValue({
   ok: true,
   json: () => Promise.resolve({ result: "mocked" }),
 }) as any;
@@ -134,6 +140,9 @@ global.fetch = jest.fn().mockResolvedValue({
 ### Discord.js Mocking
 
 ```typescript
+// Import mock from bun:test
+import { mock } from "bun:test";
+
 // Mock Discord message
 const mockMessage = {
   content: "test message",
@@ -141,10 +150,10 @@ const mockMessage = {
   guild: { id: "guild123" },
   channel: {
     id: "channel123",
-    sendTyping: jest.fn(),
-    send: jest.fn(),
+    sendTyping: mock(),
+    send: mock(),
   },
-  reply: jest.fn(),
+  reply: mock(),
   mentions: { users: new Map() },
 };
 ```
@@ -154,7 +163,7 @@ const mockMessage = {
 ### Global Setup (tests/setup.ts)
 
 ```typescript
-import { jest, expect, afterEach } from "bun:test";
+import { mock, expect, afterEach } from "bun:test";
 
 // Environment variables for tests
 process.env.NODE_ENV = "test";
@@ -162,11 +171,13 @@ process.env.GEMINI_API_KEY = "test-api-key";
 process.env.BRAVE_SEARCH_API_KEY = "test-brave-key";
 
 // Global fetch mock
-global.fetch = jest.fn() as any;
+const fetchMock = mock();
+global.fetch = fetchMock as any;
 
 // Cleanup after each test
 afterEach(() => {
-  jest.clearAllMocks();
+  // Clear mocks individually
+  (fetchMock as any).mockClear();
 });
 ```
 
@@ -231,8 +242,10 @@ it("should handle async operations", async () => {
 ### Testing Error Handling
 
 ```typescript
+import { mock } from "bun:test";
+
 it("should handle errors gracefully", async () => {
-  jest.spyOn(service, "method").mockRejectedValue(new Error("Test error"));
+  mock.spyOn(service, "method").mockRejectedValue(new Error("Test error"));
 
   await expect(service.methodThatCalls()).rejects.toThrow("Test error");
 });
@@ -241,8 +254,10 @@ it("should handle errors gracefully", async () => {
 ### Testing Function Calls
 
 ```typescript
+import { mock } from "bun:test";
+
 it("should call dependencies correctly", () => {
-  const mockDependency = jest.fn();
+  const mockDependency = mock();
   service.setDependency(mockDependency);
 
   service.doSomething();
@@ -307,9 +322,9 @@ bun test --coverage --coverageThreshold='{"global":{"branches":80,"functions":80
 
 ### What Works (✅)
 
-- `jest.fn()` - Function mocking
-- `jest.spyOn()` - Method spying
-- `jest.clearAllMocks()` - Mock cleanup
+- `mock()` - Function mocking (imported from bun:test)
+- `mock.spyOn()` - Method spying
+- Mock cleanup via individual `mockClear()` calls
 - `expect()` - All Jest matchers
 - `describe()`, `it()`, `beforeEach()`, `afterEach()`
 - Async/await testing
@@ -317,21 +332,22 @@ bun test --coverage --coverageThreshold='{"global":{"branches":80,"functions":80
 
 ### What Doesn't Work (❌)
 
-- `jest.mock()` - Module mocking (use dependency injection)
-- `jest.doMock()` - Dynamic mocking
+- Module mocking (use dependency injection)
+- Dynamic mocking 
+- Jest global object (`jest.fn()`, `jest.clearAllMocks()`, etc.)
 - Jest transformers - Use Bun's built-in TypeScript support
 
 ### Migration Notes
 
 ```typescript
-// ❌ Don't use jest.mock()
-jest.mock("../service", () => ({
-  Service: jest.fn(),
-}));
+// ❌ Don't use module mocking
+// Module mocking is not supported in Bun
 
 // ✅ Use dependency injection instead
+import { mock } from "bun:test";
+
 const mockService = {
-  method: jest.fn().mockReturnValue("mocked"),
+  method: mock().mockReturnValue("mocked"),
 };
 instance.setService(mockService);
 ```
@@ -340,7 +356,7 @@ instance.setService(mockService);
 
 1. **Test Naming**: Use descriptive names explaining expected behavior
 2. **Test Isolation**: Each test independent, proper cleanup
-3. **Mock Management**: Clear mocks between tests with `jest.clearAllMocks()`
+3. **Mock Management**: Clear mocks between tests individually with `(mockFn as any).mockClear()`
 4. **Dependency Injection**: Prefer DI over module mocking
 5. **Specific Assertions**: Use precise matchers for clear failure messages
 6. **Coverage Focus**: Aim for meaningful tests, not just coverage numbers
@@ -364,7 +380,12 @@ it("should handle async", async () => {
 
 // ✅ Proper mock cleanup
 afterEach(() => {
-  jest.clearAllMocks();
+  // Clear mocks individually
+  Object.values(mockService).forEach((mockFn) => {
+    if (typeof mockFn === "function") {
+      (mockFn as any).mockClear();
+    }
+  });
 });
 
 // ✅ Proper ES module imports

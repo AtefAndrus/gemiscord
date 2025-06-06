@@ -1,5 +1,5 @@
 // Test setup file for common test configuration
-import { afterEach, expect, jest } from "bun:test";
+import { afterEach, expect, mock } from "bun:test";
 
 // Mock environment variables for tests
 process.env.NODE_ENV = "test";
@@ -9,23 +9,32 @@ process.env.GEMINI_API_KEY = "test-gemini-key";
 process.env.BRAVE_SEARCH_API_KEY = "test-brave-key";
 process.env.DATABASE_URL = "sqlite://tests/fixtures/test.sqlite";
 
+// Create mocks for console methods
+const consoleMocks = {
+  log: mock(),
+  info: mock(),
+  warn: mock(),
+  error: mock(),
+};
+
 // Global test utilities - suppress logs during tests
 if (process.env.TEST_LOG_LEVEL !== "verbose") {
   global.console = {
     ...console,
-    log: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+    ...consoleMocks,
   };
 }
 
 // Mock fetch globally for API tests
-global.fetch = jest.fn() as any;
+const fetchMock = mock();
+global.fetch = fetchMock as any;
 
 // Cleanup after each test
 afterEach(() => {
-  jest.clearAllMocks();
+  // Clear all mocks individually
+  Object.values(consoleMocks).forEach((mockFn) => (mockFn as any).mockClear());
+  (fetchMock as any).mockClear();
+
   // Reset environment variables if they were modified in tests
   process.env.NODE_ENV = "test";
 });
