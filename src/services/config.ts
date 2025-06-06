@@ -47,9 +47,8 @@ export class ConfigService implements IConfigService {
       (await this.keyv.get(CONFIG_KEYS.GUILD.MENTION_ENABLED(guildId))) ??
       DEFAULTS.GUILD.MENTION_ENABLED;
     
-    config.response_channels =
-      (await this.keyv.get(CONFIG_KEYS.GUILD.RESPONSE_CHANNELS(guildId))) ??
-      DEFAULTS.GUILD.RESPONSE_CHANNELS;
+    const storedChannels = await this.keyv.get(CONFIG_KEYS.GUILD.RESPONSE_CHANNELS(guildId));
+    config.response_channels = storedChannels ? [...storedChannels] : [...DEFAULTS.GUILD.RESPONSE_CHANNELS];
     config.search_enabled =
       (await this.keyv.get(CONFIG_KEYS.GUILD.SEARCH_ENABLED(guildId))) ??
       DEFAULTS.GUILD.SEARCH_ENABLED;
@@ -264,17 +263,19 @@ export class ConfigService implements IConfigService {
     const channels = await this.keyv.get(
       CONFIG_KEYS.GUILD.RESPONSE_CHANNELS(guildId)
     );
-    return channels ?? DEFAULTS.GUILD.RESPONSE_CHANNELS;
+    // Always return a new array to prevent mutation of defaults
+    return channels ? [...channels] : [...DEFAULTS.GUILD.RESPONSE_CHANNELS];
   }
 
   // Helper method to add a response channel
   async addResponseChannel(guildId: string, channelId: string): Promise<void> {
     const channels = await this.getResponseChannels(guildId);
     if (!channels.includes(channelId)) {
-      channels.push(channelId);
+      // Create a new array to avoid mutating the default array
+      const updatedChannels = [...channels, channelId];
       await this.keyv.set(
         CONFIG_KEYS.GUILD.RESPONSE_CHANNELS(guildId),
-        channels
+        updatedChannels
       );
       logger.info(`Added response channel ${channelId} for guild ${guildId}`);
     }
@@ -306,7 +307,11 @@ export class ConfigService implements IConfigService {
       CONFIG_KEYS.GUILD.MESSAGE_LIMIT_STRATEGY(guildId),
     ];
 
-    await Promise.all(keys.map((key) => this.keyv.delete(key)));
+    // Delete keys one by one to ensure each is properly cleared
+    for (const key of keys) {
+      const deleted = await this.keyv.delete(key);
+      logger.debug(`Deleted key ${key}: ${deleted}`);
+    }
 
     logger.info(`Cleared all settings for guild ${guildId}`);
   }

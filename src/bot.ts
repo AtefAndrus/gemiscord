@@ -10,7 +10,7 @@ import { logger } from "./utils/logger.js";
 // Import handlers
 import { MessageCreateHandler } from "./handlers/messageCreate.js";
 import { ReadyHandler } from "./handlers/ready.js";
-// import { InteractionCreateHandler } from './handlers/interactionCreate.js';
+import { handleInteractionCreate } from './handlers/interactionCreate.js';
 
 // Global services
 export let configManager: ConfigManager;
@@ -73,9 +73,10 @@ async function registerEventHandlers(client: ExtendedClient): Promise<void> {
     messageHandler.execute(client, message)
   );
 
-  // Interaction create event (to be implemented)
-  // const interactionHandler = new InteractionCreateHandler();
-  // client.on(interactionHandler.name, (...args) => interactionHandler.execute(client, ...args));
+  // Interaction create event
+  client.on('interactionCreate', (interaction) => {
+    handleInteractionCreate(interaction);
+  });
 
   // Error handling
   client.on("error", (error: Error) => {
