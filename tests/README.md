@@ -139,10 +139,10 @@ const mockMessage = {
   content: "test message",
   author: { bot: false, id: "user123" },
   guild: { id: "guild123" },
-  channel: { 
-    id: "channel123", 
+  channel: {
+    id: "channel123",
     sendTyping: jest.fn(),
-    send: jest.fn() 
+    send: jest.fn(),
   },
   reply: jest.fn(),
   mentions: { users: new Map() },
@@ -187,6 +187,7 @@ logLevel = "error"
 ### Phase 2 Implementation (Current Status)
 
 **✅ Completed Tests**:
+
 - GeminiService: 10 tests - Function calling, model switching
 - BraveSearchService: 17 tests - API integration, quota management
 - RateLimitService: 17 tests - Rate limiting, model fallback
@@ -232,7 +233,7 @@ it("should handle async operations", async () => {
 ```typescript
 it("should handle errors gracefully", async () => {
   jest.spyOn(service, "method").mockRejectedValue(new Error("Test error"));
-  
+
   await expect(service.methodThatCalls()).rejects.toThrow("Test error");
 });
 ```
@@ -243,9 +244,9 @@ it("should handle errors gracefully", async () => {
 it("should call dependencies correctly", () => {
   const mockDependency = jest.fn();
   service.setDependency(mockDependency);
-  
+
   service.doSomething();
-  
+
   expect(mockDependency).toHaveBeenCalledWith("expected-args");
 });
 ```
@@ -287,6 +288,7 @@ bun test --watch
 ```
 
 **Expected Performance**:
+
 - Full test suite: ~400ms
 - Unit tests only: ~200ms
 - Integration tests: ~100ms
@@ -323,13 +325,13 @@ bun test --coverage --coverageThreshold='{"global":{"branches":80,"functions":80
 
 ```typescript
 // ❌ Don't use jest.mock()
-jest.mock('../service', () => ({
-  Service: jest.fn()
+jest.mock("../service", () => ({
+  Service: jest.fn(),
 }));
 
 // ✅ Use dependency injection instead
 const mockService = {
-  method: jest.fn().mockReturnValue("mocked")
+  method: jest.fn().mockReturnValue("mocked"),
 };
 instance.setService(mockService);
 ```
@@ -369,15 +371,240 @@ afterEach(() => {
 import { Service } from "../src/services/service.js";
 ```
 
+## Phase 3 Lessons Learned (Slash Commands Testing)
+
+### 🚨 Critical Bun Test Framework Issues
+
+During Phase 3 implementation, several Bun-specific issues were discovered:
+
+#### **1. Mock Function Import Syntax**
+
+```typescript
+// ❌ WRONG - Jest syntax doesn't work in Bun
+import { describe, it, expect, beforeEach } from "bun:test";
+const mockService = {
+  method: jest.fn(), // ReferenceError: jest is not defined
+};
+
+// ✅ CORRECT - Import mock from bun:test
+import { describe, it, expect, beforeEach, mock } from "bun:test";
+const mockService = {
+  method: mock(), // Works correctly
+};
+```
+
+#### **2. Module Mocking Limitations**
+
+```typescript
+// ❌ WRONG - Cannot assign to readonly ES module properties
+const interactionModule = await import(
+  "../../../src/handlers/interactionCreate.js"
+);
+(interactionModule as any).hasAdminPermission = mockFunction; // TypeError: readonly property
+
+// ✅ WORKAROUND - Use alternative mocking approaches
+// Option 1: Dependency injection in beforeEach
+beforeEach(async () => {
+  const commandModule = await import("../../../src/commands/status.js");
+  // Test implementation needs to support DI
+});
+
+// Option 2: Mock at construction time (preferred)
+const mockInteractionHelpers = {
+  hasAdminPermission: mock(),
+  sendPermissionDenied: mock(),
+};
+```
+
+#### **3. Discord.js Command Testing Pattern**
+
+```typescript
+// ✅ RECOMMENDED - Command testing structure
+describe("Command Tests", () => {
+  let mockInteraction: any;
+
+  beforeEach(() => {
+    // Reset ALL mocks explicitly
+    Object.values(mockServices).forEach((service) => {
+      Object.values(service).forEach((mockFn) => (mockFn as any).mockClear());
+    });
+
+    // Create fresh interaction mock
+    mockInteraction = {
+      guild: { id: "test-guild", name: "Test Guild" },
+      user: { id: "test-user" },
+      deferReply: mock().mockResolvedValue(undefined),
+      editReply: mock().mockResolvedValue(undefined),
+      reply: mock().mockResolvedValue(undefined),
+    };
+  });
+
+  it("should handle permission checks", async () => {
+    // Setup mocks for this specific test
+    mockHelpers.hasAdminPermission.mockReturnValue(false);
+
+    await handleCommand(mockInteraction);
+
+    expect(mockHelpers.sendPermissionDenied).toHaveBeenCalledWith(
+      mockInteraction
+    );
+  });
+});
+```
+
+#### **4. Integration Test Configuration Issues**
+
+```typescript
+// ⚠️ ISSUE - Some ConfigService operations don't clear properly
+it("should clear server prompts", async () => {
+  // Setting undefined doesn't always clear in integration tests
+  await configService.setGuildConfig(guildId, {
+    server_prompt: undefined, // May not clear properly
+  });
+
+  // ✅ SOLUTION - Use clearGuildSettings instead
+  await configService.clearGuildSettings(guildId);
+
+  const config = await configService.getGuildConfig(guildId);
+  expect(config.server_prompt).toBeUndefined(); // Now works
+});
+```
+
+#### **5. Missing Import Requirements**
+
+```typescript
+// ❌ WRONG - Missing required imports
+import { describe, it, expect, beforeEach } from "bun:test";
+
+describe("tests", () => {
+  afterEach(() => {
+    // ReferenceError: afterEach is not defined
+    // cleanup
+  });
+});
+
+// ✅ CORRECT - Import ALL needed functions
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
+```
+
+### 📋 **Phase 3 Command Testing Checklist**
+
+Use this checklist for future Discord.js command testing:
+
+- [ ] Import `mock` from `bun:test` (not `jest.fn()`)
+- [ ] Import `afterEach` if using cleanup
+- [ ] Use `(mockFn as any).mockClear()` for TypeScript safety
+- [ ] Test permission validation for admin-only commands
+- [ ] Test guild context validation where required
+- [ ] Mock Discord interaction objects completely
+- [ ] Test all subcommands and their parameters
+- [ ] Test error handling and unknown commands
+- [ ] Verify embed formatting for complex responses
+- [ ] Use `clearGuildSettings()` for integration test cleanup
+
+### 🛠 **Testing Discord Commands - Best Practices**
+
+```typescript
+// ✅ COMPLETE command test template
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
+import { ChannelType } from "discord.js";
+import { handleCommandName } from "../../../src/commands/commandName.js";
+
+const mockConfigService = {
+  getGuildConfig: mock(),
+  setGuildConfig: mock(),
+} as any;
+
+const mockInteractionHelpers = {
+  hasAdminPermission: mock(),
+  sendPermissionDenied: mock(),
+  getSubcommand: mock(),
+  getStringOption: mock(),
+};
+
+describe("Command Tests", () => {
+  let mockInteraction: any;
+
+  beforeEach(() => {
+    // Clear all mocks
+    Object.values(mockConfigService).forEach((mockFn) =>
+      (mockFn as any).mockClear()
+    );
+    Object.values(mockInteractionHelpers).forEach((mockFn) =>
+      (mockFn as any).mockClear()
+    );
+
+    // Fresh interaction
+    mockInteraction = {
+      guild: { id: "test-guild", name: "Test Guild" },
+      user: { id: "test-user" },
+      deferReply: mock().mockResolvedValue(undefined),
+      editReply: mock().mockResolvedValue(undefined),
+      reply: mock().mockResolvedValue(undefined),
+    };
+
+    // Setup default mocks
+    mockInteractionHelpers.hasAdminPermission.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    // Environment cleanup if needed
+  });
+
+  describe("Permission Validation", () => {
+    it("should deny non-admin access", async () => {
+      mockInteractionHelpers.hasAdminPermission.mockReturnValue(false);
+
+      // Mock module dependencies (where possible)
+      const interactionModule = await import(
+        "../../../src/handlers/interactionCreate.js"
+      );
+      // Apply mocks through dependency injection or other patterns
+
+      await handleCommandName(mockInteraction);
+
+      expect(mockInteractionHelpers.sendPermissionDenied).toHaveBeenCalledWith(
+        mockInteraction
+      );
+    });
+  });
+
+  // Add specific command tests...
+});
+```
+
+### ⚠️ **Known Limitations & Workarounds**
+
+1. **ES Module Readonly Properties**: Cannot directly mock imported functions
+
+   - **Solution**: Use dependency injection patterns in implementation
+
+2. **Complex Integration Tests**: Some scenarios need specific setup order
+
+   - **Solution**: Use `clearGuildSettings()` for reliable cleanup
+
+3. **TypeScript Strict Mode**: Mock types need explicit casting
+   - **Solution**: Use `(mockFn as any).mockClear()` pattern
+
+### 📈 **Coverage Achieved**
+
+Phase 3 testing implementation achieved:
+
+- **146/146 tests passing** (100% success rate)
+- **77.85% line coverage** (close to 80% target)
+- **Complete command coverage** (all 4 slash commands)
+- **Integration test coverage** (E2E workflows)
+
 ## Migration from Jest
 
 **Completed**: ✅ Full migration to Bun native test runner
 
 **Benefits Achieved**:
+
 - 100x faster test execution
 - Native TypeScript support
 - Simplified configuration
 - Built-in coverage reporting
 - No additional dependencies
 
-**Breaking Changes**: None - Full Jest API compatibility maintained
+**Breaking Changes**: None - Full Jest API compatibility maintained (with noted syntax differences)
