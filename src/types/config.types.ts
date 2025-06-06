@@ -90,6 +90,29 @@ export interface YAMLConfig {
     };
   };
 
+  // Logging configuration
+  logging: {
+    file: {
+      enabled: boolean;
+      level: LogLevel;
+      directory: string;
+      filename_pattern: string;
+      max_files: number;
+      include_console_colors: boolean;
+      separate_error_file: boolean;
+      json_format: boolean;
+    };
+    rotation: {
+      daily: boolean;
+      max_size: string;
+      cleanup_old: boolean;
+    };
+    performance: {
+      buffer_size: number;
+      flush_interval: number;
+    };
+  };
+
   // Rate limiting enhancements
   rate_limiting: {
     safety_buffer: number;

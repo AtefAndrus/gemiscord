@@ -113,6 +113,25 @@ monitoring:
     health_check: 60000 # 1 minute
     metrics: 300000 # 5 minutes
 
+# Logging configuration
+logging:
+  file:
+    enabled: true # Enable file logging
+    level: "INFO" # File log level (ERROR, WARN, INFO, DEBUG)
+    directory: "logs" # Relative to project root
+    filename_pattern: "gemiscord-{date}.log" # {date} = YYYY-MM-DD
+    max_files: 30 # Keep last 30 days
+    include_console_colors: false # Strip ANSI codes from file logs
+    separate_error_file: true # Create separate .error.log file
+    json_format: false # Use plain text format (true for JSON logs)
+  rotation:
+    daily: true # Rotate logs daily
+    max_size: "50MB" # Max file size before rotation
+    cleanup_old: true # Auto-cleanup old files
+  performance:
+    buffer_size: 8192 # Buffer size for async writes
+    flush_interval: 5000 # Flush to disk every 5 seconds
+
 # Rate limiting enhancements
 rate_limiting:
   safety_buffer: 0.8

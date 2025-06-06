@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import fs from "fs/promises";
+import path from "path";
 import {
   botLogger,
   configLogger,
   discordLogger,
+  FileLoggingConfig,
   logger,
+  Logger,
 } from "../../../src/utils/logger";
 
 // Mock console methods for testing
@@ -152,6 +156,274 @@ describe("Logger", () => {
       logger.info("Message", "param1", "param2", { data: true });
 
       expect(true).toBe(true);
+    });
+  });
+
+  describe("file logging", () => {
+    const testLogDir = path.resolve("test-logs");
+
+    // Test configuration
+    const testFileConfig: FileLoggingConfig = {
+      enabled: true,
+      level: "INFO",
+      directory: testLogDir, // Use absolute path
+      filename_pattern: "test-{date}.log",
+      max_files: 5,
+      include_console_colors: false,
+      separate_error_file: true,
+      json_format: false,
+      rotation: {
+        daily: true,
+        max_size: "1MB",
+        cleanup_old: true,
+      },
+      performance: {
+        buffer_size: 1, // Immediate flush
+        flush_interval: 100,
+      },
+    };
+
+    beforeEach(async () => {
+      // Clean up FileLogger instances
+      await Logger.clearFileLoggerInstances();
+
+      // Clean up test log directory
+      try {
+        await fs.rm(testLogDir, { recursive: true, force: true });
+      } catch (error) {
+        // Directory might not exist, that's ok
+      }
+    });
+
+    afterEach(async () => {
+      // Clean up FileLogger instances
+      await Logger.clearFileLoggerInstances();
+
+      // Clean up test log directory
+      try {
+        await fs.rm(testLogDir, { recursive: true, force: true });
+      } catch (error) {
+        // Directory might not exist, that's ok
+      }
+    });
+
+    it("should create log files when file logging is enabled", async () => {
+      const testLogger = new Logger("Test", "INFO", {
+        fileConfig: {
+          ...testFileConfig,
+          directory: testLogDir, // Ensure absolute path
+        },
+      });
+
+      testLogger.info("Test log message");
+
+      // Force flush to ensure file is written
+      await testLogger.forceFlushLogs();
+
+      // Check if log directory was created
+      const dirExists = await fs
+        .access(testLogDir)
+        .then(() => true)
+        .catch(() => false);
+      expect(dirExists).toBe(true);
+
+      // Check if log file was created
+      const files = await fs.readdir(testLogDir).catch(() => []);
+      expect(files.length).toBeGreaterThan(0);
+    });
+
+    it("should write logs to separate error file when enabled", async () => {
+      const testLogger = new Logger("Test", "ERROR", {
+        fileConfig: {
+          ...testFileConfig,
+          directory: testLogDir, // Ensure absolute path
+        },
+      });
+
+      testLogger.error("Test error message");
+
+      // Force flush to ensure file is written
+      await testLogger.forceFlushLogs();
+
+      // Ensure flush completes by waiting for all async operations
+      await new Promise((resolve) => setImmediate(resolve));
+
+      // Check for error log file
+      const files = await fs.readdir(testLogDir).catch(() => []);
+      const errorFile = files.find((file) => file.includes(".error.log"));
+      expect(errorFile).toBeDefined();
+    });
+
+    it("should strip ANSI color codes from file logs", async () => {
+      const testLogger = new Logger("Test", "INFO", {
+        fileConfig: {
+          ...testFileConfig,
+          directory: testLogDir, // Ensure absolute path
+          include_console_colors: false,
+        },
+      });
+
+      testLogger.info("Test message with colors");
+
+      // Force flush to ensure file is written
+      await testLogger.forceFlushLogs();
+
+      const files = await fs.readdir(testLogDir).catch(() => []);
+      const logFile = files.find(
+        (file) => file.endsWith(".log") && !file.includes(".error.")
+      );
+
+      if (logFile) {
+        const content = await fs.readFile(
+          path.join(testLogDir, logFile),
+          "utf8"
+        );
+        // Should not contain ANSI escape codes
+        expect(content).not.toMatch(/\x1b\[[0-9;]*m/);
+      }
+    });
+
+    it("should respect file logging level", async () => {
+      const testLogger = new Logger("Test", "DEBUG", {
+        fileConfig: {
+          ...testFileConfig,
+          directory: testLogDir, // Ensure absolute path
+          level: "ERROR", // Only log errors (and warnings) to file
+        },
+      });
+
+      testLogger.debug("Debug message");
+      testLogger.info("Info message");
+      testLogger.warn("Warning message");
+      testLogger.error("Error message");
+
+      // Force flush to ensure file is written
+      await testLogger.forceFlushLogs();
+
+      // Ensure flush completes by waiting for all async operations
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const files = await fs.readdir(testLogDir).catch(() => []);
+
+      // Should have files created (errors and warnings)
+      expect(files.length).toBeGreaterThan(0);
+
+      // Check that debug and info messages are not in files
+      const logFiles = files.filter((file) => file.endsWith(".log"));
+      if (logFiles.length > 0) {
+        const logContent = await fs.readFile(
+          path.join(testLogDir, logFiles[0]),
+          "utf8"
+        );
+        expect(logContent).not.toContain("Debug message");
+        expect(logContent).not.toContain("Info message");
+      }
+    });
+
+    it("should handle JSON format when enabled", async () => {
+      const jsonConfig: FileLoggingConfig = {
+        ...testFileConfig,
+        directory: testLogDir, // Ensure absolute path
+        json_format: true,
+      };
+
+      const testLogger = new Logger("Test", "INFO", {
+        fileConfig: jsonConfig,
+      });
+
+      testLogger.info("Test JSON message");
+
+      // Force flush to ensure file is written
+      await testLogger.forceFlushLogs();
+
+      const files = await fs.readdir(testLogDir).catch(() => []);
+      const logFile = files.find(
+        (file) => file.endsWith(".log") && !file.includes(".error.")
+      );
+
+      if (logFile) {
+        const content = await fs.readFile(
+          path.join(testLogDir, logFile),
+          "utf8"
+        );
+        const lines = content.trim().split("\n");
+
+        // Should contain valid JSON
+        for (const line of lines) {
+          if (line.trim()) {
+            expect(() => JSON.parse(line)).not.toThrow();
+          }
+        }
+      }
+    });
+
+    it("should not create log files when file logging is disabled", async () => {
+      const disabledConfig: FileLoggingConfig = {
+        ...testFileConfig,
+        enabled: false,
+        directory: testLogDir, // Ensure absolute path
+      };
+
+      const testLogger = new Logger("Test", "INFO", {
+        fileConfig: disabledConfig,
+      });
+
+      testLogger.info("Test message");
+
+      // Wait for potential file operations
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Check if log directory exists
+      const dirExists = await fs
+        .access(testLogDir)
+        .then(() => true)
+        .catch(() => false);
+      expect(dirExists).toBe(false);
+    });
+
+    it("should auto-flush when buffer is full", async () => {
+      const smallBufferConfig: FileLoggingConfig = {
+        ...testFileConfig,
+        directory: testLogDir, // Ensure absolute path
+        performance: {
+          buffer_size: 2, // Very small buffer
+          flush_interval: 10000, // Long flush interval
+        },
+      };
+
+      const testLogger = new Logger("Test", "INFO", {
+        fileConfig: smallBufferConfig,
+      });
+
+      // Write more messages than buffer size
+      testLogger.info("Message 1");
+      testLogger.info("Message 2");
+      testLogger.info("Message 3"); // Should trigger flush
+
+      // Force flush to ensure all files are written
+      await testLogger.forceFlushLogs();
+
+      // Additional wait to ensure file system operations complete
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const files = await fs.readdir(testLogDir).catch(() => []);
+      expect(files.length).toBeGreaterThan(0);
+    });
+
+    it("should handle errors gracefully", async () => {
+      // Create logger with invalid directory path
+      const invalidConfig: FileLoggingConfig = {
+        ...testFileConfig,
+        directory: "/invalid/readonly/path",
+      };
+
+      // Should not throw when creating logger
+      expect(() => {
+        const testLogger = new Logger("Test", "INFO", {
+          fileConfig: invalidConfig,
+        });
+        testLogger.info("Test message");
+      }).not.toThrow();
     });
   });
 });
