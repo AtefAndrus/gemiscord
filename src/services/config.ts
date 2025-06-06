@@ -46,9 +46,13 @@ export class ConfigService implements IConfigService {
     config.mention_enabled =
       (await this.keyv.get(CONFIG_KEYS.GUILD.MENTION_ENABLED(guildId))) ??
       DEFAULTS.GUILD.MENTION_ENABLED;
-    
-    const storedChannels = await this.keyv.get(CONFIG_KEYS.GUILD.RESPONSE_CHANNELS(guildId));
-    config.response_channels = storedChannels ? [...storedChannels] : [...DEFAULTS.GUILD.RESPONSE_CHANNELS];
+
+    const storedChannels = await this.keyv.get(
+      CONFIG_KEYS.GUILD.RESPONSE_CHANNELS(guildId)
+    );
+    config.response_channels = storedChannels
+      ? [...storedChannels]
+      : [...DEFAULTS.GUILD.RESPONSE_CHANNELS];
     config.search_enabled =
       (await this.keyv.get(CONFIG_KEYS.GUILD.SEARCH_ENABLED(guildId))) ??
       DEFAULTS.GUILD.SEARCH_ENABLED;

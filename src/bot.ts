@@ -8,9 +8,9 @@ import { APP_INFO, ENV } from "./utils/constants.js";
 import { logger } from "./utils/logger.js";
 
 // Import handlers
+import { handleInteractionCreate } from "./handlers/interactionCreate.js";
 import { MessageCreateHandler } from "./handlers/messageCreate.js";
 import { ReadyHandler } from "./handlers/ready.js";
-import { handleInteractionCreate } from './handlers/interactionCreate.js';
 
 // Global services
 export let configManager: ConfigManager;
@@ -74,7 +74,7 @@ async function registerEventHandlers(client: ExtendedClient): Promise<void> {
   );
 
   // Interaction create event
-  client.on('interactionCreate', (interaction) => {
+  client.on("interactionCreate", (interaction) => {
     handleInteractionCreate(interaction);
   });
 

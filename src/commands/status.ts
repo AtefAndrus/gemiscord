@@ -1,13 +1,18 @@
 /**
  * /status command implementation
- * 
+ *
  * Displays bot status, uptime, API usage statistics, and system information
  */
 
-import { ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { logger } from '../utils/logger.js';
-import { hasAdminPermission, sendPermissionDenied, formatUptime, formatBytes } from '../handlers/interactionCreate.js';
-import { configService, configManager } from '../bot.js';
+import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import { configManager, configService } from "../bot.js";
+import {
+  formatBytes,
+  formatUptime,
+  hasAdminPermission,
+  sendPermissionDenied,
+} from "../handlers/interactionCreate.js";
+import { logger } from "../utils/logger.js";
 
 // Track bot start time for uptime calculation
 const BOT_START_TIME = Date.now();
@@ -15,7 +20,9 @@ const BOT_START_TIME = Date.now();
 /**
  * Handle /status command
  */
-export async function handleStatusCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+export async function handleStatusCommand(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
   try {
     // Check permissions
     if (!hasAdminPermission(interaction)) {
@@ -23,7 +30,7 @@ export async function handleStatusCommand(interaction: ChatInputCommandInteracti
       return;
     }
 
-    logger.info('Processing /status command', {
+    logger.info("Processing /status command", {
       userId: interaction.user.id,
       guildId: interaction.guild?.id,
     });
@@ -40,21 +47,21 @@ export async function handleStatusCommand(interaction: ChatInputCommandInteracti
     // Send response
     await interaction.editReply({ embeds: [embed] });
 
-    logger.info('/status command completed successfully');
-
+    logger.info("/status command completed successfully");
   } catch (error) {
-    logger.error('Error in /status command:', error);
-    
+    logger.error("Error in /status command:", error);
+
     try {
-      const errorMessage = '❌ Failed to retrieve bot status. Please try again later.';
-      
+      const errorMessage =
+        "❌ Failed to retrieve bot status. Please try again later.";
+
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage });
       } else {
         await interaction.reply({ content: errorMessage, ephemeral: true });
       }
     } catch (replyError) {
-      logger.error('Failed to send error response:', replyError);
+      logger.error("Failed to send error response:", replyError);
     }
   }
 }
@@ -104,25 +111,25 @@ async function gatherStatusData(): Promise<StatusData> {
 async function getConfigurationStatus(): Promise<ConfigurationStatus> {
   try {
     const config = configManager.getConfig();
-    
+
     return {
       loaded: true,
-      version: '3.0.0', // Phase 3 version
-      environment: process.env.NODE_ENV || 'development',
+      version: "3.0.0", // Phase 3 version
+      environment: process.env.NODE_ENV || "development",
       models: {
-        primary: config.api?.gemini?.models?.primary || 'unknown',
-        fallback: config.api?.gemini?.models?.fallback || 'unknown',
+        primary: config.api?.gemini?.models?.primary || "unknown",
+        fallback: config.api?.gemini?.models?.fallback || "unknown",
       },
     };
   } catch (error) {
-    logger.error('Failed to get configuration status:', error);
+    logger.error("Failed to get configuration status:", error);
     return {
       loaded: false,
-      version: 'error',
-      environment: process.env.NODE_ENV || 'development',
+      version: "error",
+      environment: process.env.NODE_ENV || "development",
       models: {
-        primary: 'error',
-        fallback: 'error',
+        primary: "error",
+        fallback: "error",
       },
     };
   }
@@ -136,15 +143,15 @@ async function getApiStatus(): Promise<ApiStatus> {
   return {
     gemini: {
       available: process.env.GEMINI_API_KEY ? true : false,
-      currentModel: 'gemini-2.5-flash-preview-0520', // Will be dynamic
+      currentModel: "gemini-2.5-flash-preview-0520", // Will be dynamic
       requestsToday: 0, // Will be tracked
-      rateLimitStatus: 'healthy',
+      rateLimitStatus: "healthy",
     },
     braveSearch: {
       available: process.env.BRAVE_SEARCH_API_KEY ? true : false,
       requestsToday: 0, // Will be tracked
       quotaRemaining: 2000, // Will be dynamic
-      rateLimitStatus: 'healthy',
+      rateLimitStatus: "healthy",
     },
   };
 }
@@ -159,16 +166,16 @@ async function getDatabaseStatus(): Promise<DatabaseStatus> {
 
     return {
       connected: true,
-      type: 'SQLite',
-      url: process.env.DATABASE_URL || 'sqlite://config/bot.sqlite',
+      type: "SQLite",
+      url: process.env.DATABASE_URL || "sqlite://config/bot.sqlite",
       lastCheck: Date.now(),
     };
   } catch (error) {
-    logger.error('Database status check failed:', error);
+    logger.error("Database status check failed:", error);
     return {
       connected: false,
-      type: 'SQLite',
-      url: 'error',
+      type: "SQLite",
+      url: "error",
       lastCheck: Date.now(),
     };
   }
@@ -179,60 +186,62 @@ async function getDatabaseStatus(): Promise<DatabaseStatus> {
  */
 function createStatusEmbed(data: StatusData): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle('🤖 Bot Status')
+    .setTitle("🤖 Bot Status")
     .setColor(0x00ff00) // Green for healthy
     .setTimestamp(new Date(data.timestamp))
-    .setFooter({ text: 'Gemiscord Phase 3' });
+    .setFooter({ text: "Gemiscord Phase 3" });
 
   // System Information
   embed.addFields({
-    name: '⏱️ System',
+    name: "⏱️ System",
     value: [
       `**Uptime:** ${formatUptime(data.uptime)}`,
-      `**Memory:** ${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`,
+      `**Memory:** ${formatBytes(data.memory.used)} / ${formatBytes(
+        data.memory.total
+      )}`,
       `**Environment:** ${data.configuration.environment}`,
-    ].join('\n'),
+    ].join("\n"),
     inline: true,
   });
 
   // Configuration Status
   embed.addFields({
-    name: '⚙️ Configuration',
+    name: "⚙️ Configuration",
     value: [
-      `**Status:** ${data.configuration.loaded ? '✅ Loaded' : '❌ Error'}`,
+      `**Status:** ${data.configuration.loaded ? "✅ Loaded" : "❌ Error"}`,
       `**Version:** ${data.configuration.version}`,
       `**Primary Model:** ${data.configuration.models.primary}`,
       `**Fallback Model:** ${data.configuration.models.fallback}`,
-    ].join('\n'),
+    ].join("\n"),
     inline: true,
   });
 
   // API Status
-  const geminiStatus = data.apis.gemini.available ? '✅' : '❌';
-  const searchStatus = data.apis.braveSearch.available ? '✅' : '❌';
-  
+  const geminiStatus = data.apis.gemini.available ? "✅" : "❌";
+  const searchStatus = data.apis.braveSearch.available ? "✅" : "❌";
+
   embed.addFields({
-    name: '🔌 APIs',
+    name: "🔌 APIs",
     value: [
       `**Gemini AI:** ${geminiStatus} ${data.apis.gemini.rateLimitStatus}`,
       `**Current Model:** ${data.apis.gemini.currentModel}`,
       `**Requests Today:** ${data.apis.gemini.requestsToday}`,
       `**Brave Search:** ${searchStatus} ${data.apis.braveSearch.rateLimitStatus}`,
       `**Quota Remaining:** ${data.apis.braveSearch.quotaRemaining}`,
-    ].join('\n'),
+    ].join("\n"),
     inline: false,
   });
 
   // Database Status
-  const dbStatus = data.database.connected ? '✅ Connected' : '❌ Disconnected';
+  const dbStatus = data.database.connected ? "✅ Connected" : "❌ Disconnected";
   embed.addFields({
-    name: '💾 Database',
+    name: "💾 Database",
     value: [
       `**Status:** ${dbStatus}`,
       `**Type:** ${data.database.type}`,
       `**URL:** ${data.database.url}`,
       `**Last Check:** <t:${Math.floor(data.database.lastCheck / 1000)}:R>`,
-    ].join('\n'),
+    ].join("\n"),
     inline: false,
   });
 

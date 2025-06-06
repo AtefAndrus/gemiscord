@@ -1,28 +1,30 @@
 /**
  * Discord Interaction Handler - Phase 3 Slash Commands
- * 
+ *
  * Handles all Discord interactions including slash commands
  * Routes commands to appropriate handlers and manages permissions
  */
 
-import { Interaction, ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '../utils/logger.js';
-import { ValidationError } from '../utils/errors.js';
+import { ChatInputCommandInteraction, Interaction } from "discord.js";
+import { ValidationError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 // Command handlers (will be implemented in separate files)
-import { handleStatusCommand } from '../commands/status.js';
-import { handleConfigCommand } from '../commands/config.js';
-import { handleSearchCommand } from '../commands/search.js';
-import { handleModelCommand } from '../commands/model.js';
+import { handleConfigCommand } from "../commands/config.js";
+import { handleModelCommand } from "../commands/model.js";
+import { handleSearchCommand } from "../commands/search.js";
+import { handleStatusCommand } from "../commands/status.js";
 
 /**
  * Main interaction handler - entry point for all Discord interactions
  */
-export async function handleInteractionCreate(interaction: Interaction): Promise<void> {
+export async function handleInteractionCreate(
+  interaction: Interaction
+): Promise<void> {
   try {
     // Only handle slash command interactions
     if (!interaction.isChatInputCommand()) {
-      logger.debug('Received non-command interaction, ignoring');
+      logger.debug("Received non-command interaction, ignoring");
       return;
     }
 
@@ -37,33 +39,37 @@ export async function handleInteractionCreate(interaction: Interaction): Promise
 
     // Route to appropriate command handler
     await routeCommand(interaction as ChatInputCommandInteraction);
-
   } catch (error) {
-    logger.error('Error handling interaction:', error);
-    await handleInteractionError(interaction as ChatInputCommandInteraction, error);
+    logger.error("Error handling interaction:", error);
+    await handleInteractionError(
+      interaction as ChatInputCommandInteraction,
+      error
+    );
   }
 }
 
 /**
  * Route slash commands to their respective handlers
  */
-async function routeCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+async function routeCommand(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
   const { commandName } = interaction;
 
   switch (commandName) {
-    case 'status':
+    case "status":
       await handleStatusCommand(interaction);
       break;
 
-    case 'config':
+    case "config":
       await handleConfigCommand(interaction);
       break;
 
-    case 'search':
+    case "search":
       await handleSearchCommand(interaction);
       break;
 
-    case 'model':
+    case "model":
       await handleModelCommand(interaction);
       break;
 
@@ -83,9 +89,10 @@ async function handleInteractionError(
   interaction: ChatInputCommandInteraction,
   error: unknown
 ): Promise<void> {
-  const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-  
-  logger.error('Interaction error details:', {
+  const errorMessage =
+    error instanceof Error ? error.message : "An unknown error occurred";
+
+  logger.error("Interaction error details:", {
     commandName: interaction.commandName,
     userId: interaction.user.id,
     guildId: interaction.guild?.id,
@@ -94,7 +101,8 @@ async function handleInteractionError(
 
   // Prepare error response
   const errorResponse = {
-    content: '❌ An error occurred while processing your command. Please try again later.',
+    content:
+      "❌ An error occurred while processing your command. Please try again later.",
     ephemeral: true,
   };
 
@@ -109,34 +117,38 @@ async function handleInteractionError(
       await interaction.followUp(errorResponse);
     }
   } catch (responseError) {
-    logger.error('Failed to send error response:', responseError);
+    logger.error("Failed to send error response:", responseError);
   }
 }
 
 /**
  * Check if user has permission to use admin commands
  */
-export function hasAdminPermission(interaction: ChatInputCommandInteraction): boolean {
+export function hasAdminPermission(
+  interaction: ChatInputCommandInteraction
+): boolean {
   if (!interaction.guild || !interaction.member) {
     return false;
   }
 
   // Check if user has administrator permission
   const member = interaction.member;
-  if (typeof member.permissions === 'string') {
+  if (typeof member.permissions === "string") {
     // Handle permissions as string (shouldn't happen in guild context)
     return false;
   }
 
-  return member.permissions.has('Administrator');
+  return member.permissions.has("Administrator");
 }
 
 /**
  * Send permission denied response
  */
-export async function sendPermissionDenied(interaction: ChatInputCommandInteraction): Promise<void> {
+export async function sendPermissionDenied(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
   await interaction.reply({
-    content: '❌ You need Administrator permissions to use this command.',
+    content: "❌ You need Administrator permissions to use this command.",
     ephemeral: true,
   });
 }
@@ -146,10 +158,10 @@ export async function sendPermissionDenied(interaction: ChatInputCommandInteract
  */
 export async function deferWithLoading(
   interaction: ChatInputCommandInteraction,
-  message: string = 'Processing...'
+  message: string = "Processing..."
 ): Promise<void> {
   await interaction.deferReply({ ephemeral: true });
-  
+
   // Optional: Edit with loading message
   await interaction.editReply(`⏳ ${message}`);
 }
@@ -157,7 +169,9 @@ export async function deferWithLoading(
 /**
  * Safely get subcommand name
  */
-export function getSubcommand(interaction: ChatInputCommandInteraction): string | null {
+export function getSubcommand(
+  interaction: ChatInputCommandInteraction
+): string | null {
   try {
     return interaction.options.getSubcommand(false);
   } catch {
@@ -177,10 +191,7 @@ export function getStringOption(
     return interaction.options.getString(name, required);
   } catch (error) {
     if (required) {
-      throw new ValidationError(
-        `Missing required option: ${name}`,
-        name
-      );
+      throw new ValidationError(`Missing required option: ${name}`, name);
     }
     return null;
   }
@@ -243,11 +254,11 @@ export function formatUptime(milliseconds: number): string {
  * Format file size for display
  */
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
 
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }

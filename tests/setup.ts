@@ -1,5 +1,5 @@
 // Test setup file for common test configuration
-import { jest, expect, afterEach } from "bun:test";
+import { afterEach, expect, jest } from "bun:test";
 
 // Mock environment variables for tests
 process.env.NODE_ENV = "test";
@@ -10,7 +10,7 @@ process.env.BRAVE_SEARCH_API_KEY = "test-brave-key";
 process.env.DATABASE_URL = "sqlite://tests/fixtures/test.sqlite";
 
 // Global test utilities - suppress logs during tests
-if (process.env.TEST_LOG_LEVEL !== 'verbose') {
+if (process.env.TEST_LOG_LEVEL !== "verbose") {
   global.console = {
     ...console,
     log: jest.fn(),

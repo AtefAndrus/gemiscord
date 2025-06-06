@@ -1,22 +1,28 @@
 /**
  * /model command implementation
- * 
+ *
  * Displays AI model information and usage statistics including:
  * - info: Current active model information
  * - stats: Model usage statistics and performance metrics
  * - limits: Rate limits and quota status
  */
 
-import { ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { logger } from '../utils/logger.js';
-import { hasAdminPermission, sendPermissionDenied, getSubcommand } from '../handlers/interactionCreate.js';
-import { configManager } from '../bot.js';
-import { GEMINI_MODELS } from '../types/gemini.types.js';
+import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import { configManager } from "../bot.js";
+import {
+  getSubcommand,
+  hasAdminPermission,
+  sendPermissionDenied,
+} from "../handlers/interactionCreate.js";
+import { GEMINI_MODELS } from "../types/gemini.types.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Handle /model command with subcommands
  */
-export async function handleModelCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+export async function handleModelCommand(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
   try {
     // Check permissions
     if (!hasAdminPermission(interaction)) {
@@ -26,7 +32,7 @@ export async function handleModelCommand(interaction: ChatInputCommandInteractio
 
     const subcommand = getSubcommand(interaction);
 
-    logger.info('Processing /model command', {
+    logger.info("Processing /model command", {
       userId: interaction.user.id,
       guildId: interaction.guild?.id,
       subcommand,
@@ -34,38 +40,39 @@ export async function handleModelCommand(interaction: ChatInputCommandInteractio
 
     // Route to appropriate subcommand handler
     switch (subcommand) {
-      case 'info':
+      case "info":
         await handleInfoSubcommand(interaction);
         break;
 
-      case 'stats':
+      case "stats":
         await handleStatsSubcommand(interaction);
         break;
 
-      case 'limits':
+      case "limits":
         await handleLimitsSubcommand(interaction);
         break;
 
       default:
         await interaction.reply({
-          content: '❌ Unknown subcommand. Available: `info`, `stats`, `limits`.',
+          content:
+            "❌ Unknown subcommand. Available: `info`, `stats`, `limits`.",
           ephemeral: true,
         });
     }
-
   } catch (error) {
-    logger.error('Error in /model command:', error);
-    
+    logger.error("Error in /model command:", error);
+
     try {
-      const errorMessage = '❌ Failed to retrieve model information. Please try again later.';
-      
+      const errorMessage =
+        "❌ Failed to retrieve model information. Please try again later.";
+
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage });
       } else {
         await interaction.reply({ content: errorMessage, ephemeral: true });
       }
     } catch (replyError) {
-      logger.error('Failed to send error response:', replyError);
+      logger.error("Failed to send error response:", replyError);
     }
   }
 }
@@ -73,46 +80,50 @@ export async function handleModelCommand(interaction: ChatInputCommandInteractio
 /**
  * Handle model info subcommand
  */
-async function handleInfoSubcommand(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleInfoSubcommand(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
   await interaction.deferReply({ ephemeral: true });
 
   try {
     const config = configManager.getConfig();
-    const primaryModel = config.api?.gemini?.models?.primary || 'unknown';
-    const fallbackModel = config.api?.gemini?.models?.fallback || 'unknown';
+    const primaryModel = config.api?.gemini?.models?.primary || "unknown";
+    const fallbackModel = config.api?.gemini?.models?.fallback || "unknown";
 
     // Get model configuration details
     const primaryModelConfig = GEMINI_MODELS[primaryModel];
     const fallbackModelConfig = GEMINI_MODELS[fallbackModel];
 
     const embed = new EmbedBuilder()
-      .setTitle('🤖 AI Model Information')
+      .setTitle("🤖 AI Model Information")
       .setColor(0x0099ff)
       .setTimestamp()
-      .setFooter({ text: 'Gemini AI Models' });
+      .setFooter({ text: "Gemini AI Models" });
 
     // API Status
-    const apiKeyStatus = process.env.GEMINI_API_KEY ? '✅ Configured' : '❌ Missing';
+    const apiKeyStatus = process.env.GEMINI_API_KEY
+      ? "✅ Configured"
+      : "❌ Missing";
     embed.addFields({
-      name: '🔑 API Status',
+      name: "🔑 API Status",
       value: [
         `**API Key:** ${apiKeyStatus}`,
         `**Provider:** Google Gemini API`,
         `**Service:** @google/genai`,
-      ].join('\n'),
+      ].join("\n"),
       inline: true,
     });
 
     // Primary Model Information
     if (primaryModelConfig) {
       embed.addFields({
-        name: '🥇 Primary Model',
+        name: "🥇 Primary Model",
         value: [
           `**Name:** ${primaryModel}`,
-          `**RPM Limit:** ${primaryModelConfig.rateLimit?.rpm || 'Unknown'}`,
-          `**TPM Limit:** ${primaryModelConfig.rateLimit?.tpm || 'Unknown'}`,
-          `**RPD Limit:** ${primaryModelConfig.rateLimit?.rpd || 'Unknown'}`,
-        ].join('\n'),
+          `**RPM Limit:** ${primaryModelConfig.rateLimit?.rpm || "Unknown"}`,
+          `**TPM Limit:** ${primaryModelConfig.rateLimit?.tpm || "Unknown"}`,
+          `**RPD Limit:** ${primaryModelConfig.rateLimit?.rpd || "Unknown"}`,
+        ].join("\n"),
         inline: true,
       });
     }
@@ -120,13 +131,13 @@ async function handleInfoSubcommand(interaction: ChatInputCommandInteraction): P
     // Fallback Model Information
     if (fallbackModelConfig) {
       embed.addFields({
-        name: '🥈 Fallback Model',
+        name: "🥈 Fallback Model",
         value: [
           `**Name:** ${fallbackModel}`,
-          `**RPM Limit:** ${fallbackModelConfig.rateLimit?.rpm || 'Unknown'}`,
-          `**TPM Limit:** ${fallbackModelConfig.rateLimit?.tpm || 'Unknown'}`,
-          `**RPD Limit:** ${fallbackModelConfig.rateLimit?.rpd || 'Unknown'}`,
-        ].join('\n'),
+          `**RPM Limit:** ${fallbackModelConfig.rateLimit?.rpm || "Unknown"}`,
+          `**TPM Limit:** ${fallbackModelConfig.rateLimit?.tpm || "Unknown"}`,
+          `**RPD Limit:** ${fallbackModelConfig.rateLimit?.rpd || "Unknown"}`,
+        ].join("\n"),
         inline: true,
       });
     }
@@ -134,35 +145,37 @@ async function handleInfoSubcommand(interaction: ChatInputCommandInteraction): P
     // Available Models
     const availableModels = Object.keys(GEMINI_MODELS);
     embed.addFields({
-      name: '📋 Available Models',
-      value: availableModels.map(model => `• ${model}`).join('\n') || 'None configured',
+      name: "📋 Available Models",
+      value:
+        availableModels.map((model) => `• ${model}`).join("\n") ||
+        "None configured",
       inline: false,
     });
 
     // Model Features
     embed.addFields({
-      name: '✨ Features',
+      name: "✨ Features",
       value: [
-        '• **Function Calling:** Web search, character counting',
-        '• **Automatic Fallback:** Switches models when rate limited',
-        '• **Context Awareness:** Maintains conversation context',
-        '• **Multi-language Support:** Japanese and English',
-      ].join('\n'),
+        "• **Function Calling:** Web search, character counting",
+        "• **Automatic Fallback:** Switches models when rate limited",
+        "• **Context Awareness:** Maintains conversation context",
+        "• **Multi-language Support:** Japanese and English",
+      ].join("\n"),
       inline: false,
     });
 
     await interaction.editReply({ embeds: [embed] });
 
-    logger.info('Model info displayed', {
+    logger.info("Model info displayed", {
       guildId: interaction.guild?.id,
       primaryModel,
       fallbackModel,
     });
-
   } catch (error) {
-    logger.error('Failed to retrieve model info:', error);
+    logger.error("Failed to retrieve model info:", error);
     await interaction.editReply({
-      content: '❌ Failed to retrieve model information. Please check the configuration.',
+      content:
+        "❌ Failed to retrieve model information. Please check the configuration.",
     });
   }
 }
@@ -170,7 +183,9 @@ async function handleInfoSubcommand(interaction: ChatInputCommandInteraction): P
 /**
  * Handle model stats subcommand
  */
-async function handleStatsSubcommand(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleStatsSubcommand(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
   await interaction.deferReply({ ephemeral: true });
 
   try {
@@ -178,85 +193,86 @@ async function handleStatsSubcommand(interaction: ChatInputCommandInteraction): 
     const mockStats = getMockModelStats();
 
     const embed = new EmbedBuilder()
-      .setTitle('📊 Model Usage Statistics')
+      .setTitle("📊 Model Usage Statistics")
       .setColor(0x00ff00)
       .setTimestamp()
-      .setFooter({ text: 'Statistics for current month' });
+      .setFooter({ text: "Statistics for current month" });
 
     // Primary Model Stats
     embed.addFields({
-      name: '🥇 Primary Model Usage',
+      name: "🥇 Primary Model Usage",
       value: [
         `**Total Requests:** ${mockStats.primary.requests.toLocaleString()}`,
         `**Total Tokens:** ${mockStats.primary.tokens.toLocaleString()}`,
         `**Avg Response Time:** ${mockStats.primary.avgResponseTime}ms`,
         `**Success Rate:** ${mockStats.primary.successRate}%`,
-      ].join('\n'),
+      ].join("\n"),
       inline: true,
     });
 
     // Fallback Model Stats
     embed.addFields({
-      name: '🥈 Fallback Model Usage',
+      name: "🥈 Fallback Model Usage",
       value: [
         `**Total Requests:** ${mockStats.fallback.requests.toLocaleString()}`,
         `**Total Tokens:** ${mockStats.fallback.tokens.toLocaleString()}`,
         `**Avg Response Time:** ${mockStats.fallback.avgResponseTime}ms`,
         `**Success Rate:** ${mockStats.fallback.successRate}%`,
-      ].join('\n'),
+      ].join("\n"),
       inline: true,
     });
 
     // Function Calling Stats
     embed.addFields({
-      name: '⚡ Function Calls',
+      name: "⚡ Function Calls",
       value: [
         `**Web Search:** ${mockStats.functions.webSearch.toLocaleString()} calls`,
         `**Character Count:** ${mockStats.functions.characterCount.toLocaleString()} calls`,
         `**Total Functions:** ${mockStats.functions.total.toLocaleString()} calls`,
-      ].join('\n'),
+      ].join("\n"),
       inline: true,
     });
 
     // Performance Metrics
     embed.addFields({
-      name: '🎯 Performance',
+      name: "🎯 Performance",
       value: [
         `**Model Switches:** ${mockStats.performance.modelSwitches}`,
         `**Rate Limit Hits:** ${mockStats.performance.rateLimitHits}`,
         `**Error Rate:** ${mockStats.performance.errorRate}%`,
         `**Uptime:** ${mockStats.performance.uptime}%`,
-      ].join('\n'),
+      ].join("\n"),
       inline: true,
     });
 
     // Daily Usage Trend
     embed.addFields({
-      name: '📈 Today\'s Usage',
+      name: "📈 Today's Usage",
       value: [
         `**Requests:** ${mockStats.today.requests}`,
         `**Peak Hour:** ${mockStats.today.peakHour}:00`,
         `**Active Since:** ${mockStats.today.activeSince}`,
-      ].join('\n'),
+      ].join("\n"),
       inline: true,
     });
 
     embed.addFields({
-      name: '⚠️ Note',
-      value: 'Statistics are simulated during Phase 3 development. Real-time tracking will be available in production.',
+      name: "⚠️ Note",
+      value:
+        "Statistics are simulated during Phase 3 development. Real-time tracking will be available in production.",
       inline: false,
     });
 
     await interaction.editReply({ embeds: [embed] });
 
-    logger.info('Model stats displayed', {
+    logger.info("Model stats displayed", {
       guildId: interaction.guild?.id,
     });
-
   } catch (error) {
-    logger.error('Failed to retrieve model stats:', error);
+    logger.error("Failed to retrieve model stats:", error);
     await interaction.editReply({
-      content: '❌ Failed to retrieve model statistics. Please try again later.',
+      content:
+        "❌ Failed to retrieve model statistics. Please try again later.",
     });
   }
 }
@@ -264,19 +280,21 @@ async function handleStatsSubcommand(interaction: ChatInputCommandInteraction): 
 /**
  * Handle model limits subcommand
  */
-async function handleLimitsSubcommand(interaction: ChatInputCommandInteraction): Promise<void> {
+async function handleLimitsSubcommand(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
   await interaction.deferReply({ ephemeral: true });
 
   try {
     const config = configManager.getConfig();
-    const primaryModel = config.api?.gemini?.models?.primary || 'unknown';
-    const fallbackModel = config.api?.gemini?.models?.fallback || 'unknown';
+    const primaryModel = config.api?.gemini?.models?.primary || "unknown";
+    const fallbackModel = config.api?.gemini?.models?.fallback || "unknown";
 
     const embed = new EmbedBuilder()
-      .setTitle('⚖️ Rate Limits & Quotas')
+      .setTitle("⚖️ Rate Limits & Quotas")
       .setColor(0xffa500)
       .setTimestamp()
-      .setFooter({ text: 'Current rate limit status' });
+      .setFooter({ text: "Current rate limit status" });
 
     // Primary Model Limits
     const primaryConfig = GEMINI_MODELS[primaryModel];
@@ -285,11 +303,17 @@ async function handleLimitsSubcommand(interaction: ChatInputCommandInteraction):
       embed.addFields({
         name: `🥇 ${primaryModel}`,
         value: [
-          `**RPM:** ${primaryUsage.rpm}/${primaryConfig.rateLimit?.rpm || 'Unknown'} (${primaryUsage.rpmPercent}%)`,
-          `**TPM:** ${primaryUsage.tpm}/${primaryConfig.rateLimit?.tpm || 'Unknown'} (${primaryUsage.tpmPercent}%)`,
-          `**RPD:** ${primaryUsage.rpd}/${primaryConfig.rateLimit?.rpd || 'Unknown'} (${primaryUsage.rpdPercent}%)`,
+          `**RPM:** ${primaryUsage.rpm}/${
+            primaryConfig.rateLimit?.rpm || "Unknown"
+          } (${primaryUsage.rpmPercent}%)`,
+          `**TPM:** ${primaryUsage.tpm}/${
+            primaryConfig.rateLimit?.tpm || "Unknown"
+          } (${primaryUsage.tpmPercent}%)`,
+          `**RPD:** ${primaryUsage.rpd}/${
+            primaryConfig.rateLimit?.rpd || "Unknown"
+          } (${primaryUsage.rpdPercent}%)`,
           `**Status:** ${primaryUsage.status}`,
-        ].join('\n'),
+        ].join("\n"),
         inline: true,
       });
     }
@@ -301,53 +325,63 @@ async function handleLimitsSubcommand(interaction: ChatInputCommandInteraction):
       embed.addFields({
         name: `🥈 ${fallbackModel}`,
         value: [
-          `**RPM:** ${fallbackUsage.rpm}/${fallbackConfig.rateLimit?.rpm || 'Unknown'} (${fallbackUsage.rpmPercent}%)`,
-          `**TPM:** ${fallbackUsage.tpm}/${fallbackConfig.rateLimit?.tpm || 'Unknown'} (${fallbackUsage.tpmPercent}%)`,
-          `**RPD:** ${fallbackUsage.rpd}/${fallbackConfig.rateLimit?.rpd || 'Unknown'} (${fallbackUsage.rpdPercent}%)`,
+          `**RPM:** ${fallbackUsage.rpm}/${
+            fallbackConfig.rateLimit?.rpm || "Unknown"
+          } (${fallbackUsage.rpmPercent}%)`,
+          `**TPM:** ${fallbackUsage.tpm}/${
+            fallbackConfig.rateLimit?.tpm || "Unknown"
+          } (${fallbackUsage.tpmPercent}%)`,
+          `**RPD:** ${fallbackUsage.rpd}/${
+            fallbackConfig.rateLimit?.rpd || "Unknown"
+          } (${fallbackUsage.rpdPercent}%)`,
           `**Status:** ${fallbackUsage.status}`,
-        ].join('\n'),
+        ].join("\n"),
         inline: true,
       });
     }
 
     // Rate Limiting Info
     embed.addFields({
-      name: '🛡️ Rate Limiting',
+      name: "🛡️ Rate Limiting",
       value: [
-        '**RPM:** Requests per minute',
-        '**TPM:** Tokens per minute',
-        '**RPD:** Requests per day',
-        '**Safety Buffer:** 80% of limits used',
-      ].join('\n'),
+        "**RPM:** Requests per minute",
+        "**TPM:** Tokens per minute",
+        "**RPD:** Requests per day",
+        "**Safety Buffer:** 80% of limits used",
+      ].join("\n"),
       inline: true,
     });
 
     // Next Reset Times
     const now = new Date();
     const nextMinute = new Date(now.getTime() + (60 - now.getSeconds()) * 1000);
-    const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const nextDay = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
 
     embed.addFields({
-      name: '🔄 Reset Times',
+      name: "🔄 Reset Times",
       value: [
         `**Minute Reset:** <t:${Math.floor(nextMinute.getTime() / 1000)}:R>`,
         `**Daily Reset:** <t:${Math.floor(nextDay.getTime() / 1000)}:R>`,
-      ].join('\n'),
+      ].join("\n"),
       inline: false,
     });
 
     await interaction.editReply({ embeds: [embed] });
 
-    logger.info('Model limits displayed', {
+    logger.info("Model limits displayed", {
       guildId: interaction.guild?.id,
       primaryModel,
       fallbackModel,
     });
-
   } catch (error) {
-    logger.error('Failed to retrieve model limits:', error);
+    logger.error("Failed to retrieve model limits:", error);
     await interaction.editReply({
-      content: '❌ Failed to retrieve rate limit information. Please try again later.',
+      content:
+        "❌ Failed to retrieve rate limit information. Please try again later.",
     });
   }
 }
@@ -383,7 +417,7 @@ function getMockModelStats() {
     today: {
       requests: 89,
       peakHour: 14,
-      activeSince: '08:00',
+      activeSince: "08:00",
     },
   };
 }
@@ -392,8 +426,8 @@ function getMockModelStats() {
  * Get mock usage data for a model (to be replaced with real data)
  */
 function getMockUsageData(modelName: string) {
-  const isHighUsage = modelName.includes('2.5'); // Simulate higher usage for primary model
-  
+  const isHighUsage = modelName.includes("2.5"); // Simulate higher usage for primary model
+
   return {
     rpm: isHighUsage ? 8 : 2,
     rpmPercent: isHighUsage ? 80 : 13,
@@ -401,6 +435,6 @@ function getMockUsageData(modelName: string) {
     tpmPercent: isHighUsage ? 72 : 9,
     rpd: isHighUsage ? 387 : 89,
     rpdPercent: isHighUsage ? 77 : 6,
-    status: isHighUsage ? '🟡 High Usage' : '✅ Normal',
+    status: isHighUsage ? "🟡 High Usage" : "✅ Normal",
   };
 }
