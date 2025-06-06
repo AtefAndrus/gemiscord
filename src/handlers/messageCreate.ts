@@ -1,10 +1,9 @@
 // Discord message create event handler
 
 import { Message, TextChannel } from "discord.js";
-import { configService } from "../bot.js";
+import { configService, configManager } from "../bot.js";
 import { IMessageHandler } from "../interfaces/handlers.js";
 import { BraveSearchService } from "../services/braveSearch.js";
-import { ConfigManager } from "../services/configManager.js";
 import { GeminiService } from "../services/gemini.js";
 import { MessageProcessor } from "../services/messageProcessor.js";
 import { RateLimitService } from "../services/rateLimit.js";
@@ -24,25 +23,22 @@ import { discordLogger as logger } from "../utils/logger.js";
 export class MessageCreateHandler implements IMessageHandler {
   name: "messageCreate" = "messageCreate";
   private messageProcessor: MessageProcessor;
-  private configManager: ConfigManager;
   private geminiService: GeminiService;
   private braveSearchService: BraveSearchService;
   private rateLimitService: RateLimitService;
 
   constructor() {
     this.messageProcessor = new MessageProcessor();
-    this.configManager = new ConfigManager();
-    this.geminiService = new GeminiService(this.configManager);
+    this.geminiService = new GeminiService(configManager);
     this.braveSearchService = new BraveSearchService(configService);
     this.rateLimitService = new RateLimitService(
       configService,
-      this.configManager
+      configManager
     );
   }
 
   async initialize(): Promise<void> {
     try {
-      await this.configManager.loadConfig();
       await this.geminiService.initialize();
       await this.braveSearchService.initialize();
       await this.rateLimitService.initialize();
@@ -242,7 +238,7 @@ export class MessageCreateHandler implements IMessageHandler {
         searchEnabled && (await this.rateLimitService.isSearchAvailable());
 
       // Build system prompt
-      const baseSystemPrompt = this.configManager.getBaseSystemPrompt();
+      const baseSystemPrompt = configManager.getBaseSystemPrompt();
       const systemPrompt = context.isAutoResponse
         ? `${baseSystemPrompt}\n\n自動応答モードです。自然な会話を心がけてください。`
         : baseSystemPrompt;

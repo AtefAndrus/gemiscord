@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 bun.lockb
+.venv-sqlite-tools/
 
 # Environment files
 .env
