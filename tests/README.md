@@ -333,7 +333,7 @@ bun test --coverage --coverageThreshold='{"global":{"branches":80,"functions":80
 ### What Doesn't Work (❌)
 
 - Module mocking (use dependency injection)
-- Dynamic mocking 
+- Dynamic mocking
 - Jest global object (`jest.fn()`, `jest.clearAllMocks()`, etc.)
 - Jest transformers - Use Bun's built-in TypeScript support
 
