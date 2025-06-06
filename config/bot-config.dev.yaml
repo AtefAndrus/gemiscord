@@ -17,7 +17,7 @@ prompts:
 api:
   gemini:
     rate_limits:
-      "gemini-2.5-flash-preview-0520":
+      "gemini-2.5-flash-preview-05-20":
         rpm: 5 # Lower for testing
         tpm: 125000 # Half of production
         rpd: 250 # Half of production

@@ -22,7 +22,7 @@ response_handling:
 api:
   gemini:
     rate_limits:
-      "gemini-2.5-flash-preview-0520":
+      "gemini-2.5-flash-preview-05-20":
         rpm: 9 # Leave buffer for safety
         tpm: 225000 # 90% of actual limit
         rpd: 450 # 90% of actual limit
