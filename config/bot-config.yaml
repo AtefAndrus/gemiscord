@@ -117,7 +117,7 @@ monitoring:
 logging:
   file:
     enabled: true # Enable file logging
-    level: "INFO" # File log level (ERROR, WARN, INFO, DEBUG)
+    level: "DEBUG" # File log level (ERROR, WARN, INFO, DEBUG)
     directory: "logs" # Relative to project root
     filename_pattern: "gemiscord-{date}.log" # {date} = YYYY-MM-DD
     max_files: 30 # Keep last 30 days

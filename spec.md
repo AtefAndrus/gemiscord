@@ -12,7 +12,7 @@ Discord で Gemini API (Function Calling) + Brave Search API を統合した AI 
 - **設定システム**: YAML + keyv/SQLite デュアル構成
 - **Discord 基盤**: bot.ts, handlers, message 処理
 - **セキュリティ**: メッセージサニタイゼーション実装
-- **ログ・エラー**: 構造化ログ, カスタムエラークラス
+- **ログ・エラー**: 構造化ログ, カスタムエラークラス, ファイルログ出力機能
 - **テスト**: 単体・統合テスト完備 (80%+ カバレッジ)
 
 ### ✅ Phase 2 完了 (2025 年 6 月)
@@ -36,11 +36,43 @@ Discord で Gemini API (Function Calling) + Brave Search API を統合した AI 
 - 管理者限定セキュリティ実装
 - Discord.js v14 完全統合
 
+### ✅ ファイルログ機能 完成 (2025 年 6 月)
+
+- **スマートファイルログ**: 日次ローテーション、自動クリーンアップ
+- **非同期バッファリング**: パフォーマンス最適化されたファイル書き込み
+- **エラーファイル分離**: エラーログの別ファイル出力機能
+- **JSON フォーマット**: 構造化ログ解析サポート
+- **設定ベース制御**: YAML 設定で簡単カスタマイズ
+
+**ファイルログ仕様**:
+
+```yaml
+# config/bot-config.yaml
+logging:
+  file:
+    enabled: true
+    level: "INFO" # ログレベル制御
+    directory: "logs" # ログディレクトリ
+    filename_pattern: "gemiscord-{date}.log"
+    max_files: 30 # 保存日数
+    separate_error_file: true # エラーファイル分離
+    json_format: false # JSON形式出力
+  rotation:
+    daily: true # 日次ローテーション
+    max_size: "50MB" # ファイルサイズ制限
+    cleanup_old: true # 古いファイル自動削除
+  performance:
+    buffer_size: 8192 # バッファサイズ
+    flush_interval: 5000 # フラッシュ間隔(ms)
+```
+
+**テスト結果**: 22 テスト全合格 (100%成功率)
+
 ### ⏳ Phase 4 計画 (本番環境)
 
 - ファイル処理 (画像対応)
 - Docker 化・本番デプロイ
-- 監視・ログ集約システム
+- 監視システム (ファイルログ集約システムは完成済み)
 
 ## 技術スタック
 

@@ -116,6 +116,43 @@ Each Discord server can customize:
 - **Custom Prompts**: Server-specific AI personality/behavior
 - **Search Settings**: Enable/disable web search functionality
 
+### **Logging Configuration**
+
+Gemiscord features comprehensive file logging with smart rotation:
+
+- **File Logging**: Automatic log files in `logs/` directory
+- **Log Rotation**: Daily rotation with automatic cleanup
+- **Error Separation**: Optional separate error log files
+- **JSON Format**: Structured logging support for log analysis
+- **Buffer Management**: Performance-optimized async file writing
+
+**Configuration** (in `config/bot-config.yaml`):
+
+```yaml
+logging:
+  file:
+    enabled: true
+    level: "INFO" # ERROR, WARN, INFO, DEBUG
+    directory: "logs"
+    filename_pattern: "gemiscord-{date}.log"
+    max_files: 30 # Keep 30 days of logs
+    separate_error_file: true
+    json_format: false # Set to true for structured JSON logs
+  rotation:
+    daily: true
+    max_size: "50MB"
+    cleanup_old: true
+  performance:
+    buffer_size: 8192 # Buffer size for batched writes
+    flush_interval: 5000 # Flush every 5 seconds
+```
+
+**Log Files Generated**:
+
+- `logs/gemiscord-2025-06-06.log` - Main application logs
+- `logs/gemiscord-2025-06-06.error.log` - Error logs (if separate_error_file: true)
+- Automatic daily rotation and cleanup of old files
+
 ### **Slash Commands (Administrator Only)**
 
 Complete slash command system implemented with admin-only access:
