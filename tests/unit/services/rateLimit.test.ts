@@ -1,47 +1,46 @@
 // Unit tests for RateLimitService
 
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import { ConfigService } from "../../../src/services/config.js";
 import { ConfigManager } from "../../../src/services/configManager.js";
 import { RateLimitService } from "../../../src/services/rateLimit.js";
 import { GEMINI_MODELS } from "../../../src/types/gemini.types.js";
 
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Mock ConfigService
 const mockConfigService = {
-  getSearchUsage: jest.fn(),
-  setRateLimitString: jest.fn(),
-  getRateLimitValue: jest.fn(),
-  setRateLimitValue: jest.fn(),
-  hasRateLimitKey: jest.fn(),
-  deleteRateLimitKey: jest.fn(),
+  getSearchUsage: mock(),
+  setRateLimitString: mock(),
+  getRateLimitValue: mock(),
+  setRateLimitValue: mock(),
+  hasRateLimitKey: mock(),
+  deleteRateLimitKey: mock(),
 } as unknown as ConfigService;
-
-// Mock ConfigManager
-const mockConfigManager = {
-  getConfig: jest.fn(),
-} as unknown as ConfigManager;
 
 describe("RateLimitService", () => {
   let rateLimitService: RateLimitService;
+  let configManager: ConfigManager;
+  const testConfigDir = join(__dirname, "../../../config");
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+  beforeEach(async () => {
+    // Clear all mocks
+    (mockConfigService.getSearchUsage as any).mockClear();
+    (mockConfigService.setRateLimitString as any).mockClear();
+    (mockConfigService.getRateLimitValue as any).mockClear();
+    (mockConfigService.setRateLimitValue as any).mockClear();
+    (mockConfigService.hasRateLimitKey as any).mockClear();
+    (mockConfigService.deleteRateLimitKey as any).mockClear();
 
-    // Mock ConfigManager.getConfig to return basic config
-    mockConfigManager.getConfig = jest.fn().mockReturnValue({
-      api: {
-        gemini: {
-          models: {
-            primary: "gemini-2.5-flash-preview-0520",
-            fallback: "gemini-2.0-flash",
-          },
-        },
-      },
-    });
+    // Use real ConfigManager with actual config file
+    configManager = new ConfigManager(testConfigDir);
+    await configManager.loadConfig();
 
-    rateLimitService = new RateLimitService(
-      mockConfigService,
-      mockConfigManager
-    );
+    rateLimitService = new RateLimitService(mockConfigService, configManager);
   });
 
   describe("constructor", () => {
@@ -53,9 +52,10 @@ describe("RateLimitService", () => {
   describe("initialize", () => {
     beforeEach(() => {
       // Mock the private initializeModelCounters method
-      jest
-        .spyOn(rateLimitService, "initializeModelCounters" as any)
-        .mockResolvedValue(undefined);
+      spyOn(
+        rateLimitService,
+        "initializeModelCounters" as any
+      ).mockResolvedValue(undefined);
     });
 
     it("should initialize counters for all models", async () => {
@@ -69,9 +69,10 @@ describe("RateLimitService", () => {
     });
 
     it("should throw error if initialization fails", async () => {
-      jest
-        .spyOn(rateLimitService, "initializeModelCounters" as any)
-        .mockRejectedValue(new Error("Init failed"));
+      spyOn(
+        rateLimitService,
+        "initializeModelCounters" as any
+      ).mockRejectedValue(new Error("Init failed"));
 
       await expect(rateLimitService.initialize()).rejects.toThrow(
         "Failed to initialize rate limit service"
@@ -80,40 +81,38 @@ describe("RateLimitService", () => {
   });
 
   describe("getAvailableModel", () => {
-    beforeEach(() => {
-      jest
-        .spyOn(rateLimitService, "getModelsByPriority" as any)
-        .mockReturnValue(["gemini-2.5-flash-preview-0520", "gemini-2.0-flash"]);
-    });
-
     it("should return first available model", async () => {
-      jest
-        .spyOn(rateLimitService, "checkLimits")
+      spyOn(rateLimitService, "checkLimits")
         .mockResolvedValueOnce(true) // First model available
         .mockResolvedValueOnce(false); // Second model not available
 
       const result = await rateLimitService.getAvailableModel();
 
-      expect(result).toBe("gemini-2.5-flash-preview-0520");
-      expect(rateLimitService.checkLimits).toHaveBeenCalledWith(
-        "gemini-2.5-flash-preview-0520"
-      );
+      // Get actual model names from config
+      const config = configManager.getConfig();
+      const primaryModel = config.api.gemini.models.primary;
+
+      expect(result).toBe(primaryModel);
+      expect(rateLimitService.checkLimits).toHaveBeenCalledWith(primaryModel);
     });
 
     it("should return fallback model if primary is unavailable", async () => {
-      jest
-        .spyOn(rateLimitService, "checkLimits")
+      spyOn(rateLimitService, "checkLimits")
         .mockResolvedValueOnce(false) // First model not available
         .mockResolvedValueOnce(true); // Second model available
 
       const result = await rateLimitService.getAvailableModel();
 
-      expect(result).toBe("gemini-2.0-flash");
+      // Get actual fallback model from config
+      const config = configManager.getConfig();
+      const fallbackModel = config.api.gemini.models.fallback;
+
+      expect(result).toBe(fallbackModel);
       expect(rateLimitService.checkLimits).toHaveBeenCalledTimes(2);
     });
 
     it("should return null if no models available", async () => {
-      jest.spyOn(rateLimitService, "checkLimits").mockResolvedValue(false); // All models unavailable
+      spyOn(rateLimitService, "checkLimits").mockResolvedValue(false); // All models unavailable
 
       const result = await rateLimitService.getAvailableModel();
 
@@ -121,9 +120,9 @@ describe("RateLimitService", () => {
     });
 
     it("should handle errors properly", async () => {
-      jest
-        .spyOn(rateLimitService, "checkLimits")
-        .mockRejectedValue(new Error("Check failed"));
+      spyOn(rateLimitService, "checkLimits").mockRejectedValue(
+        new Error("Check failed")
+      );
 
       await expect(rateLimitService.getAvailableModel()).rejects.toThrow(
         "Failed to check available models"
@@ -135,7 +134,7 @@ describe("RateLimitService", () => {
     const modelName = "gemini-2.0-flash";
 
     it("should return true when under limits", async () => {
-      jest.spyOn(rateLimitService, "getRemainingCapacity").mockResolvedValue({
+      spyOn(rateLimitService, "getRemainingCapacity").mockResolvedValue({
         model: modelName,
         limits: { rpm: 15, tpm: 1000000, rpd: 1500 },
         current: { rpm: 5, tpm: 100000, rpd: 100 },
@@ -155,7 +154,7 @@ describe("RateLimitService", () => {
     });
 
     it("should return false when over limits", async () => {
-      jest.spyOn(rateLimitService, "getRemainingCapacity").mockResolvedValue({
+      spyOn(rateLimitService, "getRemainingCapacity").mockResolvedValue({
         model: modelName,
         limits: { rpm: 15, tpm: 1000000, rpd: 1500 },
         current: { rpm: 14, tpm: 950000, rpd: 1400 },
@@ -180,9 +179,9 @@ describe("RateLimitService", () => {
     });
 
     it("should return false on error", async () => {
-      jest
-        .spyOn(rateLimitService, "getRemainingCapacity")
-        .mockRejectedValue(new Error("DB error"));
+      spyOn(rateLimitService, "getRemainingCapacity").mockRejectedValue(
+        new Error("DB error")
+      );
 
       const result = await rateLimitService.checkLimits(modelName);
 
@@ -192,7 +191,7 @@ describe("RateLimitService", () => {
 
   describe("isSearchAvailable", () => {
     it("should return true when under quota", async () => {
-      mockConfigService.getSearchUsage = jest.fn().mockResolvedValue(500);
+      (mockConfigService.getSearchUsage as any).mockResolvedValue(500);
 
       const result = await rateLimitService.isSearchAvailable();
 
@@ -201,7 +200,7 @@ describe("RateLimitService", () => {
     });
 
     it("should return false when quota exceeded", async () => {
-      mockConfigService.getSearchUsage = jest.fn().mockResolvedValue(2000);
+      (mockConfigService.getSearchUsage as any).mockResolvedValue(2000);
 
       const result = await rateLimitService.isSearchAvailable();
 
@@ -209,9 +208,9 @@ describe("RateLimitService", () => {
     });
 
     it("should return false on error", async () => {
-      mockConfigService.getSearchUsage = jest
-        .fn()
-        .mockRejectedValue(new Error("DB error"));
+      (mockConfigService.getSearchUsage as any).mockRejectedValue(
+        new Error("DB error")
+      );
 
       const result = await rateLimitService.isSearchAvailable();
 
@@ -223,12 +222,12 @@ describe("RateLimitService", () => {
     const modelName = "gemini-2.0-flash";
 
     beforeEach(() => {
-      jest
-        .spyOn(rateLimitService, "incrementCounter" as any)
-        .mockResolvedValue(undefined);
-      mockConfigService.setRateLimitString = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      spyOn(rateLimitService, "incrementCounter" as any).mockResolvedValue(
+        undefined
+      );
+      (mockConfigService.setRateLimitString as any).mockResolvedValue(
+        undefined
+      );
     });
 
     it("should update request counters", async () => {
@@ -283,7 +282,7 @@ describe("RateLimitService", () => {
 
   describe("getStatus", () => {
     beforeEach(() => {
-      jest.spyOn(rateLimitService, "getRemainingCapacity").mockResolvedValue({
+      spyOn(rateLimitService, "getRemainingCapacity").mockResolvedValue({
         model: "gemini-2.0-flash",
         limits: { rpm: 15, tpm: 1000000, rpd: 1500 },
         current: { rpm: 5, tpm: 100000, rpd: 100 },
@@ -325,9 +324,9 @@ describe("RateLimitService", () => {
     });
 
     it("should handle errors properly", async () => {
-      jest
-        .spyOn(rateLimitService, "getRemainingCapacity")
-        .mockRejectedValue(new Error("DB error"));
+      spyOn(rateLimitService, "getRemainingCapacity").mockRejectedValue(
+        new Error("DB error")
+      );
 
       await expect(rateLimitService.getStatus()).rejects.toThrow(
         "Failed to get rate limit status"
@@ -339,8 +338,7 @@ describe("RateLimitService", () => {
     const modelName = "gemini-2.0-flash";
 
     beforeEach(() => {
-      jest
-        .spyOn(rateLimitService, "getCounter" as any)
+      spyOn(rateLimitService, "getCounter" as any)
         .mockResolvedValueOnce(5) // rpm
         .mockResolvedValueOnce(100000) // tpm
         .mockResolvedValueOnce(100); // rpd
@@ -378,8 +376,7 @@ describe("RateLimitService", () => {
 
     it("should apply safety buffer correctly", async () => {
       // Mock high usage to test safety buffer
-      jest
-        .spyOn(rateLimitService, "getCounter" as any)
+      spyOn(rateLimitService, "getCounter" as any)
         .mockResolvedValueOnce(13) // rpm: high usage
         .mockResolvedValueOnce(800000) // tpm: high usage
         .mockResolvedValueOnce(1200); // rpd: high usage
@@ -402,20 +399,23 @@ describe("RateLimitService", () => {
     describe("getModelsByPriority", () => {
       it("should return models in priority order", () => {
         const models = rateLimitService["getModelsByPriority"]();
+        const config = configManager.getConfig();
+        const primaryModel = config.api.gemini.models.primary;
+        const fallbackModel = config.api.gemini.models.fallback;
 
-        expect(models).toContain("gemini-2.5-flash-preview-0520");
-        expect(models).toContain("gemini-2.0-flash");
+        expect(models).toContain(primaryModel);
+        expect(models).toContain(fallbackModel);
         // Primary model should come first
-        expect(models[0]).toBe("gemini-2.5-flash-preview-0520");
+        expect(models[0]).toBe(primaryModel);
       });
     });
 
     describe("incrementCounter", () => {
       it("should increment counter with TTL", async () => {
-        mockConfigService.getRateLimitValue = jest.fn().mockResolvedValue(10);
-        mockConfigService.setRateLimitValue = jest
-          .fn()
-          .mockResolvedValue(undefined);
+        (mockConfigService.getRateLimitValue as any).mockResolvedValue(10);
+        (mockConfigService.setRateLimitValue as any).mockResolvedValue(
+          undefined
+        );
 
         await rateLimitService["incrementCounter"]("test-key", 5, 60000);
 
@@ -432,7 +432,7 @@ describe("RateLimitService", () => {
 
     describe("getCounter", () => {
       it("should get current counter value", async () => {
-        mockConfigService.getRateLimitValue = jest.fn().mockResolvedValue(10);
+        (mockConfigService.getRateLimitValue as any).mockResolvedValue(10);
 
         const result = await rateLimitService["getCounter"]("test-key");
 
@@ -443,7 +443,7 @@ describe("RateLimitService", () => {
       });
 
       it("should return 0 for non-existent counter", async () => {
-        mockConfigService.getRateLimitValue = jest.fn().mockResolvedValue(0);
+        (mockConfigService.getRateLimitValue as any).mockResolvedValue(0);
 
         const result = await rateLimitService["getCounter"]("test-key");
 

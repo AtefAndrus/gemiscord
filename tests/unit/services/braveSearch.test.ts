@@ -1,6 +1,6 @@
 // Unit tests for BraveSearchService
 
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 import { BraveSearchService } from "../../../src/services/braveSearch.js";
 import { ConfigService } from "../../../src/services/config.js";
 import { ConfigManager } from "../../../src/services/configManager.js";
@@ -173,11 +173,10 @@ describe("BraveSearchService", () => {
 
     beforeEach(() => {
       // Mock canSearch to return true
-      jest.spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
+      spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
 
       // Mock incrementUsage
-      jest
-        .spyOn(braveSearchService, "incrementUsage" as any)
+      spyOn(braveSearchService, "incrementUsage" as any)
         .mockResolvedValue(undefined);
     });
 
@@ -215,7 +214,7 @@ describe("BraveSearchService", () => {
     });
 
     it("should handle quota exceeded error", async () => {
-      jest.spyOn(braveSearchService, "canSearch").mockResolvedValue(false);
+      spyOn(braveSearchService, "canSearch").mockResolvedValue(false);
 
       await expect(braveSearchService.search(mockSearchQuery)).rejects.toThrow(
         "Search quota exceeded for this month"
@@ -223,7 +222,7 @@ describe("BraveSearchService", () => {
     });
 
     it("should handle API error responses", async () => {
-      jest.spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
+      spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -237,7 +236,7 @@ describe("BraveSearchService", () => {
     });
 
     it("should handle network errors", async () => {
-      jest.spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
+      spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
 
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
@@ -250,7 +249,7 @@ describe("BraveSearchService", () => {
   describe("getUsageStats", () => {
     it("should return usage stats correctly", async () => {
       const mockUsage = 500;
-      mockConfigService.getSearchUsage = jest.fn().mockResolvedValue(mockUsage);
+      mockConfigService.getSearchUsage = mock().mockResolvedValue(mockUsage);
 
       const stats = await braveSearchService.getUsageStats();
 
@@ -261,8 +260,7 @@ describe("BraveSearchService", () => {
     });
 
     it("should handle errors and return default values", async () => {
-      mockConfigService.getSearchUsage = jest
-        .fn()
+      (mockConfigService.getSearchUsage as any)
         .mockRejectedValue(new Error("DB error"));
 
       const stats = await braveSearchService.getUsageStats();
@@ -275,7 +273,7 @@ describe("BraveSearchService", () => {
 
     it("should return zero remaining when quota exceeded", async () => {
       const mockUsage = 2500; // Over quota
-      mockConfigService.getSearchUsage = jest.fn().mockResolvedValue(mockUsage);
+      mockConfigService.getSearchUsage = mock().mockResolvedValue(mockUsage);
 
       const stats = await braveSearchService.getUsageStats();
 
@@ -288,7 +286,7 @@ describe("BraveSearchService", () => {
 
   describe("canSearch", () => {
     it("should return true when quota available", async () => {
-      jest.spyOn(braveSearchService, "getUsageStats").mockResolvedValue({
+      spyOn(braveSearchService, "getUsageStats").mockResolvedValue({
         monthlyUsage: 500,
         remainingQueries: 1500,
       });
@@ -299,7 +297,7 @@ describe("BraveSearchService", () => {
     });
 
     it("should return false when quota exhausted", async () => {
-      jest.spyOn(braveSearchService, "getUsageStats").mockResolvedValue({
+      spyOn(braveSearchService, "getUsageStats").mockResolvedValue({
         monthlyUsage: 2000,
         remainingQueries: 0,
       });
@@ -310,8 +308,7 @@ describe("BraveSearchService", () => {
     });
 
     it("should return false on error", async () => {
-      jest
-        .spyOn(braveSearchService, "getUsageStats")
+      spyOn(braveSearchService, "getUsageStats")
         .mockRejectedValue(new Error("Error"));
 
       const canSearch = await braveSearchService.canSearch();
