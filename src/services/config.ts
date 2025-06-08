@@ -17,15 +17,29 @@ export class ConfigService implements IConfigService {
   private keyv: Keyv;
 
   constructor(databaseUrl: string = "sqlite://config/bot.sqlite") {
+    // Validate database URL format
+    if (!databaseUrl.startsWith("sqlite://")) {
+      logger.warn("Invalid database URL format, using default", {
+        providedUrl: databaseUrl,
+      });
+      databaseUrl = "sqlite://config/bot.sqlite";
+    }
+
     // Ensure config directory exists
     try {
       const fs = require("fs");
       const path = require("path");
-      const configDir = path.dirname(databaseUrl.replace("sqlite://", ""));
-      if (!fs.existsSync(configDir)) {
-        fs.mkdirSync(configDir, { recursive: true });
+      const dbPath = databaseUrl.replace("sqlite://", "");
+
+      // Additional validation to prevent creating directories from malformed URLs
+      if (dbPath && !dbPath.includes(":") && dbPath.includes("/")) {
+        const configDir = path.dirname(dbPath);
+        if (!fs.existsSync(configDir)) {
+          fs.mkdirSync(configDir, { recursive: true });
+        }
       }
     } catch (error) {
+      logger.warn("Failed to create database directory", error);
       // Directory creation failed, continue with default initialization
     }
 
@@ -197,20 +211,38 @@ export class ConfigService implements IConfigService {
     );
   }
 
+  // Debug method to reset search usage for testing
+  async resetSearchUsage(): Promise<void> {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const key = CONFIG_KEYS.SEARCH.MONTHLY_USAGE(currentMonth);
+
+    await this.keyv.delete(key);
+    logger.info(`Search usage reset for ${currentMonth}`);
+  }
+
   // Statistics methods
-  async getStats(): Promise<any> {
+  async getStats(availableModels?: string[]): Promise<any> {
     const stats: any = {};
 
     stats.total_requests =
       (await this.keyv.get(CONFIG_KEYS.STATS.TOTAL_REQUESTS)) ?? 0;
     stats.search_usage =
       (await this.keyv.get(CONFIG_KEYS.STATS.SEARCH_USAGE)) ?? 0;
+    stats.total_startups =
+      (await this.keyv.get(CONFIG_KEYS.STATS.TOTAL_STARTUPS)) ?? 0;
+    stats.current_guilds =
+      (await this.keyv.get(CONFIG_KEYS.STATS.CURRENT_GUILDS)) ?? 0;
 
-    // Get model usage stats
+    // Get model usage stats dynamically
     const modelUsage: Record<string, number> = {};
-    const models = ["gemini-2.5-flash-preview-0520", "gemini-2.0-flash"];
 
-    for (const model of models) {
+    // If no models provided, check a minimal set of common models
+    const modelsToCheck = availableModels || [
+      "gemini-2.5-flash-preview-05-20",
+      "gemini-2.0-flash",
+    ];
+
+    for (const model of modelsToCheck) {
       const usage =
         (await this.keyv.get(CONFIG_KEYS.STATS.MODEL_USAGE(model))) ?? 0;
       if (usage > 0) {
@@ -233,6 +265,12 @@ export class ConfigService implements IConfigService {
       case "search_usage":
         statKey = CONFIG_KEYS.STATS.SEARCH_USAGE;
         break;
+      case "total_startups":
+        statKey = CONFIG_KEYS.STATS.TOTAL_STARTUPS;
+        break;
+      case "current_guilds":
+        statKey = CONFIG_KEYS.STATS.CURRENT_GUILDS;
+        break;
       default:
         if (key.startsWith("model_usage:")) {
           const model = key.replace("model_usage:", "");
@@ -243,11 +281,21 @@ export class ConfigService implements IConfigService {
         }
     }
 
+    logger.info(`Incrementing stat ${key} by ${value}`, {
+      statKey,
+      originalKey: key,
+    });
+
     const currentValue = (await this.keyv.get(statKey)) ?? 0;
     await this.keyv.set(statKey, currentValue + value);
-    logger.debug(
-      `Stat ${key} incremented by ${value} to ${currentValue + value}`
-    );
+
+    const newValue = currentValue + value;
+    logger.info(`Stat ${key} incremented successfully`, {
+      statKey,
+      oldValue: currentValue,
+      increment: value,
+      newValue,
+    });
   }
 
   // Cleanup old data
@@ -359,5 +407,22 @@ export class ConfigService implements IConfigService {
     ttl?: number
   ): Promise<void> {
     await this.keyv.set(key, value, ttl);
+  }
+
+  // Direct stats setting (for values that should be overwritten, not incremented)
+  async setStat(key: string, value: number): Promise<void> {
+    let statKey: string;
+
+    switch (key) {
+      case "current_guilds":
+        statKey = CONFIG_KEYS.STATS.CURRENT_GUILDS;
+        break;
+      default:
+        logger.warn(`Unsupported setStat key: ${key}`);
+        return;
+    }
+
+    await this.keyv.set(statKey, value);
+    logger.debug(`Stat ${key} set to ${value}`);
   }
 }

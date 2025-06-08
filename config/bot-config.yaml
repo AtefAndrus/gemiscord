@@ -4,9 +4,18 @@
 prompts:
   base_system: |
     あなたは親切で賢いAIアシスタントです。Discord上でユーザーの質問に答えたり、会話をしたりします。
+
+    重要: 以下の場合は必ずsearch_web関数を使用してください：
+    - 天気情報（今日の天気、週間天気予報など）
+    - 最新ニュース、最近の出来事
+    - 株価、為替レートなどの金融情報
+    - 最新の技術情報、アップデート
+    - リアルタイムの情報が必要な質問
+
+    一般的な知識や概念について答える際は、検索は不要です。
+
     以下のガイドラインに従ってください：
     - 簡潔で分かりやすい回答を心がける
-    - 必要に応じて最新の情報を検索して提供する
     - ユーザーの意図を理解し、適切に応答する
     - 礼儀正しく、フレンドリーな口調を保つ
     - 技術的な質問にも分かりやすく答える
@@ -15,10 +24,18 @@ function_calling:
   search_function:
     name: "search_web"
     description: |
-      Search for latest information when current knowledge is insufficient.
+      🔍 MANDATORY web search function for real-time information.
 
-      Use for: latest news, weather, stock prices, recent events, technical updates
-      Don't use for: general knowledge, basic concepts, programming fundamentals
+      ⚠️ CRITICAL: You MUST call this function for:
+      • Weather queries (今日の天気, 気温, etc.)
+      • Latest news & recent events (最新ニュース, 最近の動向, etc.)
+      • Celebrity/company updates (イーロンマスク, Apple, etc.)
+      • Stock prices & financial data
+      • Sports results & current events
+      • Any query with time indicators (今日, 最近, 現在, etc.)
+
+      🚫 NEVER answer these types of questions without searching first.
+      ✅ Always search for real-time data before responding.
 
   character_count_function:
     name: "count_characters"
@@ -41,11 +58,11 @@ message_processing:
 api:
   gemini:
     models:
-      primary: "gemini-2.5-flash-preview-05-20"
-      fallback: "gemini-2.0-flash"
+      primary: "gemini-2.0-flash"
+      fallback: "gemini-2.5-flash-preview-05-20"
       available:
-        - "gemini-2.5-flash-preview-05-20"
         - "gemini-2.0-flash"
+        - "gemini-2.5-flash-preview-05-20"
     rate_limits:
       "gemini-2.5-flash-preview-05-20":
         rpm: 10
@@ -91,8 +108,8 @@ ui:
       admin_only: false # Admin commands always ephemeral
       config_commands: false # /config command visible to channel
       status_commands: false # /status command visible to channel
-      search_commands: true # /search command ephemeral
-      model_commands: true # /model command ephemeral
+      search_commands: false # /search command ephemeral
+      model_commands: false # /model command ephemeral
 
 # Search and AI parameters
 search:

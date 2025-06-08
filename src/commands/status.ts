@@ -4,7 +4,11 @@
  * Displays bot status, uptime, API usage statistics, and system information
  */
 
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import {
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+  MessageFlags,
+} from "discord.js";
 import { configManager, configService } from "../bot.js";
 import {
   formatBytes,
@@ -37,7 +41,9 @@ export async function handleStatusCommand(
 
     // Defer reply for data gathering
     const ephemeral = configManager.getEphemeralSetting("status");
-    await interaction.deferReply({ ephemeral });
+    await interaction.deferReply({
+      flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+    });
 
     // Gather status information
     const statusData = await gatherStatusData();
@@ -141,19 +147,57 @@ async function getConfigurationStatus(): Promise<ConfigurationStatus> {
  * Get API services status
  */
 async function getApiStatus(): Promise<ApiStatus> {
-  // Note: This will be enhanced when service integration is complete
+  const config = configManager.getConfig();
+  const availableModels = config.api.gemini.models.available;
+  const stats = await configService.getStats(availableModels);
+
+  // Get current search usage
+  const searchUsage = await configService.getSearchUsage();
+  const searchQuota = config.api.brave_search.free_quota;
+
+  // Get actual rate limit status
+  let geminiRateLimitStatus = "healthy";
+  let searchRateLimitStatus = "healthy";
+
+  try {
+    // Import and initialize rate limit service to get actual status
+    const { RateLimitService } = await import("../services/rateLimit.js");
+    const rateLimitService = new RateLimitService(configService, configManager);
+    await rateLimitService.initialize();
+
+    // Check if primary model is available
+    const primaryModel = config.api.gemini.models.primary;
+    const canUseGemini = await rateLimitService.checkLimits(primaryModel);
+    geminiRateLimitStatus = canUseGemini ? "healthy" : "limited";
+
+    // Check search availability
+    const canUseSearch = await rateLimitService.isSearchAvailable();
+    const searchUsagePercent = (searchUsage / searchQuota) * 100;
+
+    if (!canUseSearch) {
+      searchRateLimitStatus = "quota_exceeded";
+    } else if (searchUsagePercent > 90) {
+      searchRateLimitStatus = "warning";
+    } else if (searchUsagePercent > 70) {
+      searchRateLimitStatus = "caution";
+    }
+  } catch (error) {
+    logger.error("Failed to get rate limit status:", error);
+    // Keep "healthy" as fallback
+  }
+
   return {
     gemini: {
       available: process.env.GEMINI_API_KEY ? true : false,
-      currentModel: "gemini-2.5-flash-preview-0520", // Will be dynamic
-      requestsToday: 0, // Will be tracked
-      rateLimitStatus: "healthy",
+      currentModel: config.api.gemini.models.primary,
+      requestsToday: stats.total_requests || 0,
+      rateLimitStatus: geminiRateLimitStatus,
     },
     braveSearch: {
       available: process.env.BRAVE_SEARCH_API_KEY ? true : false,
-      requestsToday: 0, // Will be tracked
-      quotaRemaining: 2000, // Will be dynamic
-      rateLimitStatus: "healthy",
+      requestsToday: searchUsage || 0,
+      quotaRemaining: Math.max(0, searchQuota - (searchUsage || 0)),
+      rateLimitStatus: searchRateLimitStatus,
     },
   };
 }
@@ -164,7 +208,9 @@ async function getApiStatus(): Promise<ApiStatus> {
 async function getDatabaseStatus(): Promise<DatabaseStatus> {
   try {
     // Test database connectivity by getting stats
-    await configService.getStats();
+    const config = configManager.getConfig();
+    const availableModels = config.api.gemini.models.available;
+    await configService.getStats(availableModels);
 
     return {
       connected: true,

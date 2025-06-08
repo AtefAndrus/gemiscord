@@ -18,7 +18,8 @@ describe("GeminiService", () => {
           gemini: {
             models: {
               primary: "gemini-2.0-flash",
-              fallback: "gemini-2.5-flash-preview-0520",
+              fallback: "gemini-2.5-flash-preview-05-20",
+              available: ["gemini-2.5-flash-preview-05-20", "gemini-2.0-flash"],
             },
           },
         },
@@ -87,15 +88,15 @@ describe("GeminiService", () => {
     it("should return available models", () => {
       const models = geminiService.getAvailableModels();
       expect(models).toContain("gemini-2.0-flash");
-      expect(models).toContain("gemini-2.5-flash-preview-0520");
+      expect(models).toContain("gemini-2.5-flash-preview-05-20");
     });
 
     it("should switch models successfully", () => {
       expect(geminiService.getCurrentModel()).toBe("gemini-2.0-flash");
 
-      geminiService.switchModel("gemini-2.5-flash-preview-0520");
+      geminiService.switchModel("gemini-2.5-flash-preview-05-20");
       expect(geminiService.getCurrentModel()).toBe(
-        "gemini-2.5-flash-preview-0520"
+        "gemini-2.5-flash-preview-05-20"
       );
     });
 
@@ -103,6 +104,67 @@ describe("GeminiService", () => {
       expect(() => geminiService.switchModel("invalid-model")).toThrow(
         "Unsupported model: invalid-model"
       );
+    });
+  });
+
+  describe("caching functionality", () => {
+    it("should handle Japanese characters in cache keys", () => {
+      // Test that Japanese characters don't cause InvalidCharacterError
+      const japaneseMessage = "こんにちは、世界！今日の天気はどうですか？";
+      const systemPrompt = "あなたは親切なAIアシスタントです。";
+
+      // This should not throw an InvalidCharacterError
+      expect(() => {
+        // Access the private method through any cast for testing
+        const service = geminiService as any;
+        const cacheKey = service.createCacheKey({
+          model: "gemini-2.0-flash",
+          systemPrompt,
+          userMessage: japaneseMessage,
+          functionCallingEnabled: false,
+        });
+
+        // Verify the cache key is a valid string
+        expect(typeof cacheKey).toBe("string");
+        expect(cacheKey.length).toBeGreaterThan(0);
+      }).not.toThrow();
+    });
+
+    it("should generate consistent cache keys for same input", () => {
+      const service = geminiService as any;
+      const options = {
+        model: "gemini-2.0-flash",
+        systemPrompt: "Test system prompt",
+        userMessage: "Test user message",
+        functionCallingEnabled: false,
+      };
+
+      const key1 = service.createCacheKey(options);
+      const key2 = service.createCacheKey(options);
+
+      expect(key1).toBe(key2);
+    });
+
+    it("should generate different cache keys for different inputs", () => {
+      const service = geminiService as any;
+      const options1 = {
+        model: "gemini-2.0-flash",
+        systemPrompt: "Test system prompt",
+        userMessage: "Test user message 1",
+        functionCallingEnabled: false,
+      };
+
+      const options2 = {
+        model: "gemini-2.0-flash",
+        systemPrompt: "Test system prompt",
+        userMessage: "Test user message 2",
+        functionCallingEnabled: false,
+      };
+
+      const key1 = service.createCacheKey(options1);
+      const key2 = service.createCacheKey(options2);
+
+      expect(key1).not.toBe(key2);
     });
   });
 

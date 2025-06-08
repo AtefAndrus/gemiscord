@@ -7,7 +7,11 @@
  * - limits: Rate limits and quota status
  */
 
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import {
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+  MessageFlags,
+} from "discord.js";
 import { configManager, configService } from "../bot.js";
 import {
   getSubcommand,
@@ -86,7 +90,9 @@ async function handleInfoSubcommand(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
   await interaction.deferReply({
-    ephemeral: configManager.getEphemeralSetting("model"),
+    flags: configManager.getEphemeralSetting("model")
+      ? MessageFlags.Ephemeral
+      : undefined,
   });
 
   try {
@@ -193,13 +199,16 @@ async function handleStatsSubcommand(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
   await interaction.deferReply({
-    ephemeral: configManager.getEphemeralSetting("model"),
+    flags: configManager.getEphemeralSetting("model")
+      ? MessageFlags.Ephemeral
+      : undefined,
   });
 
   try {
     // Get actual statistics from configService
-    const stats = await configService.getStats();
     const config = configManager.getConfig();
+    const availableModels = config.api.gemini.models.available;
+    const stats = await configService.getStats(availableModels);
     const primaryModel =
       config.api?.gemini?.models?.primary || "gemini-2.5-flash-preview-05-20";
     const fallbackModel =
@@ -308,12 +317,15 @@ async function handleLimitsSubcommand(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
   await interaction.deferReply({
-    ephemeral: configManager.getEphemeralSetting("model"),
+    flags: configManager.getEphemeralSetting("model")
+      ? MessageFlags.Ephemeral
+      : undefined,
   });
 
   try {
     const config = configManager.getConfig();
-    const stats = await configService.getStats();
+    const availableModels = config.api.gemini.models.available;
+    const stats = await configService.getStats(availableModels);
     const primaryModel = config.api?.gemini?.models?.primary || "unknown";
     const fallbackModel = config.api?.gemini?.models?.fallback || "unknown";
 

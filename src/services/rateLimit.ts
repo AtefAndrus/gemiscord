@@ -155,6 +155,14 @@ export class RateLimitService implements IRateLimitService {
         );
       }
 
+      // Update model usage statistics for /model stats command
+      if (usage.requests) {
+        await this.configService.incrementStats(
+          `model_usage:${model}`,
+          usage.requests
+        );
+      }
+
       // Update last request timestamp
       await this.configService.setRateLimitString(
         `${model}:last_request`,

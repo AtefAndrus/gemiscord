@@ -7,7 +7,11 @@
  * - test search functionality
  */
 
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import {
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+  MessageFlags,
+} from "discord.js";
 import { configManager, configService } from "../bot.js";
 import {
   getStringOption,
@@ -64,10 +68,14 @@ export async function handleSearchCommand(
         await handleTestSubcommand(interaction, guildId);
         break;
 
+      case "reset":
+        await handleResetSubcommand(interaction, guildId);
+        break;
+
       default:
         await interaction.reply({
           content:
-            "❌ Unknown subcommand. Available: `toggle`, `quota`, `test`.",
+            "❌ Unknown subcommand. Available: `toggle`, `quota`, `test`, `reset`.",
           ephemeral: configManager.getEphemeralSetting("search"),
         });
     }
@@ -83,7 +91,10 @@ export async function handleSearchCommand(
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage });
       } else {
-        await interaction.reply({ content: errorMessage, ephemeral: true });
+        await interaction.reply({
+          content: errorMessage,
+          flags: MessageFlags.Ephemeral,
+        });
       }
     } catch (replyError) {
       logger.error("Failed to send error response:", replyError);
@@ -104,7 +115,7 @@ async function handleToggleSubcommand(
     throw new ValidationError('Action must be either "enable" or "disable"');
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const enabled = action === "enable";
 
@@ -149,7 +160,7 @@ async function handleQuotaSubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   try {
     const config = configManager.getConfig();
@@ -278,7 +289,7 @@ async function handleTestSubcommand(
     );
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   try {
     // Check if search is enabled
@@ -310,8 +321,8 @@ async function handleTestSubcommand(
       return;
     }
 
-    // Perform mock search (replace with actual search when service is integrated)
-    await simulateSearchTest(interaction, query);
+    // Perform actual search test
+    await performActualSearchTest(interaction, query, guildId);
   } catch (error) {
     logger.error("Search test failed:", error);
     await interaction.editReply({
@@ -322,136 +333,78 @@ async function handleTestSubcommand(
 }
 
 /**
- * Perform search functionality test
+ * Perform actual search functionality test
  */
-async function simulateSearchTest(
+async function performActualSearchTest(
   interaction: ChatInputCommandInteraction,
-  query: string
+  query: string,
+  guildId: string
 ): Promise<void> {
-  const guildId = interaction.guild?.id;
-
   try {
-    // Get current search statistics
-    const currentUsage = await configService.getSearchUsage();
-    const stats = await configService.getStats();
+    // Import the BraveSearchService
+    const { BraveSearchService } = await import("../services/braveSearch.js");
+    const braveSearchService = new BraveSearchService(
+      configService,
+      configManager
+    );
 
+    // Initialize the search service
+    await braveSearchService.initialize();
+
+    // Perform actual search
+    const searchQuery = {
+      query,
+      region: "JP" as const,
+      count: 5,
+    };
+
+    const searchResults = await braveSearchService.search(searchQuery);
+    const formattedResults =
+      braveSearchService.formatResultsForDiscord(searchResults);
+
+    // Create success embed
     const embed = new EmbedBuilder()
-      .setTitle("🧪 Search Functionality Test")
+      .setTitle("🧪 Search Test Results")
       .setColor(0x00ff00)
       .setTimestamp()
-      .setDescription(`Testing search capabilities with query: **${query}**`);
+      .setDescription(`Successfully performed search with query: **${query}**`);
 
-    // API Configuration Status
-    const hasApiKey = !!process.env.BRAVE_SEARCH_API_KEY;
+    // Add search results
     embed.addFields({
-      name: "🔧 Configuration",
-      value: [
-        `**API Key:** ${hasApiKey ? "✅ Configured" : "❌ Missing"}`,
-        `**Search Enabled:** ${
-          (await configService.isSearchEnabled(guildId || ""))
-            ? "✅ Yes"
-            : "❌ No"
-        }`,
-        `**Endpoint:** Brave Search API`,
-      ].join("\n"),
+      name: "📊 Search Results",
+      value: `Found ${searchResults.totalResults} results in ${searchResults.searchTime}ms`,
       inline: true,
     });
 
-    // Current Usage Statistics
-    const freeQuota = 2000; // From config
-    const usagePercentage = ((currentUsage / freeQuota) * 100).toFixed(1);
+    // Add formatted results preview
+    if (formattedResults.length > 0) {
+      const preview =
+        formattedResults.length > 500
+          ? formattedResults.substring(0, 500) + "..."
+          : formattedResults;
 
-    embed.addFields({
-      name: "📊 Current Usage",
-      value: [
-        `**This Month:** ${currentUsage.toLocaleString()}`,
-        `**Quota:** ${freeQuota.toLocaleString()}`,
-        `**Usage:** ${usagePercentage}%`,
-      ].join("\n"),
-      inline: true,
-    });
-
-    // Test Results
-    const testStartTime = Date.now();
-
-    // Simulate basic functionality test
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate processing
-
-    const testDuration = Date.now() - testStartTime;
-
-    embed.addFields({
-      name: "⚡ Test Results",
-      value: [
-        `**Query Length:** ${query.length} chars`,
-        `**Processing Time:** ${testDuration}ms`,
-        `**Status:** ${
-          hasApiKey ? "✅ Ready for production" : "❌ API key required"
-        }`,
-      ].join("\n"),
-      inline: true,
-    });
-
-    // Search Statistics from actual data
-    const totalSearches = stats.search_usage || 0;
-    const totalRequests = stats.total_requests || 0;
-    const searchRatio =
-      totalRequests > 0
-        ? ((totalSearches / totalRequests) * 100).toFixed(1)
-        : "0";
-
-    embed.addFields({
-      name: "📈 Historical Data",
-      value: [
-        `**Total Search Calls:** ${totalSearches.toLocaleString()}`,
-        `**Total Bot Requests:** ${totalRequests.toLocaleString()}`,
-        `**Search Ratio:** ${searchRatio}%`,
-      ].join("\n"),
-      inline: false,
-    });
-
-    // System recommendations
-    let recommendations = "";
-    if (!hasApiKey) {
-      recommendations =
-        "⚠️ **Action Required:** Configure BRAVE_SEARCH_API_KEY environment variable.";
-    } else if (currentUsage >= freeQuota) {
-      recommendations =
-        "🚨 **Quota Exceeded:** Monthly search limit reached. Consider upgrading plan.";
-    } else if (parseFloat(usagePercentage) > 80) {
-      recommendations = "🟡 **Monitor Usage:** Approaching monthly limit.";
-    } else {
-      recommendations =
-        "✅ **System Ready:** Search functionality is operational.";
+      embed.addFields({
+        name: "🔍 Results Preview",
+        value: preview || "No results formatted",
+        inline: false,
+      });
     }
-
-    embed.addFields({
-      name: "💡 System Status",
-      value: recommendations,
-      inline: false,
-    });
 
     await interaction.editReply({ embeds: [embed] });
 
-    // Increment usage for test if API key is available
-    if (hasApiKey) {
-      await configService.incrementSearchUsage();
-    }
-
-    logger.info("Search functionality test completed", {
+    logger.info("Actual search test completed successfully", {
       guildId,
-      query: query.substring(0, 50), // Log only first 50 chars for privacy
-      queryLength: query.length,
-      hasApiKey,
-      currentUsage,
-      testDuration,
+      query: query.substring(0, 50),
+      resultCount: searchResults.totalResults,
+      searchTime: searchResults.searchTime,
     });
   } catch (error) {
-    logger.error("Search test failed:", error);
+    logger.error("Actual search test failed:", error);
 
     const errorEmbed = new EmbedBuilder()
       .setTitle("❌ Search Test Failed")
       .setColor(0xff0000)
-      .setDescription("Unable to complete search functionality test")
+      .setDescription("Failed to perform actual search test")
       .addFields({
         name: "Error Details",
         value:
@@ -460,5 +413,60 @@ async function simulateSearchTest(
       });
 
     await interaction.editReply({ embeds: [errorEmbed] });
+  }
+}
+
+/**
+ * Handle search usage reset subcommand (debug only)
+ */
+async function handleResetSubcommand(
+  interaction: ChatInputCommandInteraction,
+  guildId: string
+): Promise<void> {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  try {
+    // Get current usage before reset
+    const currentUsage = await configService.getSearchUsage();
+
+    // Reset search usage
+    await configService.resetSearchUsage();
+
+    // Get usage after reset to confirm
+    const newUsage = await configService.getSearchUsage();
+
+    const embed = new EmbedBuilder()
+      .setTitle("🔄 Search Usage Reset")
+      .setColor(0x00ff00)
+      .setTimestamp()
+      .setDescription(
+        "Search usage counters have been reset for debugging purposes"
+      );
+
+    embed.addFields({
+      name: "📊 Reset Details",
+      value: [
+        `**Previous Usage:** ${currentUsage.toLocaleString()} queries`,
+        `**Current Usage:** ${newUsage.toLocaleString()} queries`,
+        `**Monthly Quota:** ${configManager
+          .getConfig()
+          .api.brave_search.free_quota.toLocaleString()} queries`,
+        `**Status:** ✅ Ready for testing`,
+      ].join("\n"),
+      inline: false,
+    });
+
+    await interaction.editReply({ embeds: [embed] });
+
+    logger.info("Search usage reset completed", {
+      guildId,
+      previousUsage: currentUsage,
+      newUsage,
+    });
+  } catch (error) {
+    logger.error("Failed to reset search usage:", error);
+    await interaction.editReply({
+      content: "❌ Failed to reset search usage. Please try again later.",
+    });
   }
 }

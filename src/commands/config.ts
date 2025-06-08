@@ -13,6 +13,7 @@ import {
   ChannelType,
   ChatInputCommandInteraction,
   EmbedBuilder,
+  MessageFlags,
 } from "discord.js";
 import { configManager, configService } from "../bot.js";
 import {
@@ -122,7 +123,9 @@ async function handleMentionSubcommand(
   }
 
   const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({ ephemeral });
+  await interaction.deferReply({
+    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+  });
 
   const enabled = action === "enable";
   const currentConfig = await configService.getGuildConfig(guildId);
@@ -161,7 +164,9 @@ async function handleChannelSubcommand(
   }
 
   const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({ ephemeral });
+  await interaction.deferReply({
+    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+  });
 
   const currentConfig = await configService.getGuildConfig(guildId);
   const currentChannels = currentConfig.response_channels || [];
@@ -226,7 +231,9 @@ async function handlePromptSubcommand(
   }
 
   const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({ ephemeral });
+  await interaction.deferReply({
+    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+  });
 
   const currentConfig = await configService.getGuildConfig(guildId);
 
@@ -266,7 +273,9 @@ async function handleStrategySubcommand(
   }
 
   const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({ ephemeral });
+  await interaction.deferReply({
+    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+  });
 
   const currentConfig = await configService.getGuildConfig(guildId);
 
@@ -295,7 +304,9 @@ async function handleViewSubcommand(
   guildId: string
 ): Promise<void> {
   const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({ ephemeral });
+  await interaction.deferReply({
+    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+  });
 
   try {
     const config = await configService.getGuildConfig(guildId);
@@ -387,7 +398,9 @@ async function createConfigEmbed(
 
   // Usage statistics
   try {
-    const stats = await configService.getStats();
+    const availableModels =
+      configManager.getConfig().api.gemini.models.available;
+    const stats = await configService.getStats(availableModels);
     const searchUsage = await configService.getSearchUsage();
 
     const totalRequests = stats.total_requests || 0;

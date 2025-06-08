@@ -5,7 +5,11 @@
  * Routes commands to appropriate handlers and manages permissions
  */
 
-import { ChatInputCommandInteraction, Interaction } from "discord.js";
+import {
+  ChatInputCommandInteraction,
+  Interaction,
+  MessageFlags,
+} from "discord.js";
 import { configManager } from "../bot.js";
 import { ValidationError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
@@ -170,7 +174,9 @@ export async function deferWithLoading(
   message: string = "Processing...",
   ephemeral: boolean = true
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral });
+  await interaction.deferReply({
+    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+  });
 
   // Optional: Edit with loading message
   await interaction.editReply(`⏳ ${message}`);

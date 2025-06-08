@@ -101,9 +101,31 @@ export interface GeminiGenerateOptions {
 }
 
 export interface GeminiAttachment {
-  mimeType: string;
-  data: string; // base64 encoded
-  name?: string;
+  fileData?: {
+    mimeType: string;
+    fileUri: string;
+  };
+  inlineData?: {
+    mimeType: string;
+    data: string; // base64 encoded
+  };
+}
+
+export interface GeminiContentPart {
+  text?: string;
+  fileData?: {
+    mimeType: string;
+    fileUri: string;
+  };
+  inlineData?: {
+    mimeType: string;
+    data: string;
+  };
+}
+
+export interface GeminiContent {
+  role?: string;
+  parts: GeminiContentPart[];
 }
 
 export interface GeminiResponse {

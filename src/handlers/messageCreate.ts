@@ -9,6 +9,7 @@ import { MessageProcessor } from "../services/messageProcessor.js";
 import { RateLimitService } from "../services/rateLimit.js";
 import {
   ExtendedClient,
+  GeminiAttachment,
   GeminiGenerateOptions,
   MessageContext,
   SearchQuery,
@@ -185,6 +186,15 @@ export class MessageCreateHandler implements IMessageHandler {
       const response = await this.generateAIResponse(message, context);
 
       // Handle response length and send
+      logger.debug("Preparing to send response", {
+        responseLength: response.length,
+        guild: message.guild?.name,
+        channel:
+          message.channel.type === 0
+            ? `#${(message.channel as TextChannel).name}`
+            : "thread",
+      });
+
       await this.sendResponse(message, response);
 
       logger.info("AI response sent successfully", {
@@ -234,8 +244,37 @@ export class MessageCreateHandler implements IMessageHandler {
       const searchEnabled = await configService.isSearchEnabled(
         context.guildId
       );
-      const searchAvailable =
-        searchEnabled && (await this.rateLimitService.isSearchAvailable());
+      const searchQuotaAvailable =
+        await this.rateLimitService.isSearchAvailable();
+      const searchAvailable = searchEnabled && searchQuotaAvailable;
+
+      logger.debug("Search availability check", {
+        guildId: context.guildId,
+        searchEnabled,
+        searchQuotaAvailable,
+        searchAvailable,
+      });
+
+      // Debug function calling configuration
+      if (searchAvailable) {
+        try {
+          const searchFunctionDecl =
+            configManager.getSearchFunctionDeclaration();
+          logger.debug("Function calling enabled", {
+            functionName: searchFunctionDecl.functionDeclarations?.[0]?.name,
+            hasDescription:
+              !!searchFunctionDecl.functionDeclarations?.[0]?.description,
+            parameters:
+              searchFunctionDecl.functionDeclarations?.[0]?.parameters,
+          });
+        } catch (error) {
+          logger.error("Failed to get search function declaration", error);
+        }
+      } else {
+        logger.warn("Function calling disabled", {
+          reason: !searchEnabled ? "search disabled" : "quota unavailable",
+        });
+      }
 
       // Build system prompt
       const baseSystemPrompt = configManager.getBaseSystemPrompt();
@@ -245,13 +284,18 @@ export class MessageCreateHandler implements IMessageHandler {
 
       // Prepare Gemini request
       const config = configManager.getConfig();
+
+      // Convert ProcessedAttachments to GeminiAttachments
+      const geminiAttachments = await this.convertAttachmentsForGemini(
+        context.attachments
+      );
+
       const geminiOptions: GeminiGenerateOptions = {
         model: availableModel,
         systemPrompt,
         userMessage: context.sanitizedContent,
         functionCallingEnabled: searchAvailable,
-        // TODO: Convert ProcessedAttachment to GeminiAttachment
-        // attachments: context.attachments,
+        attachments: geminiAttachments,
         temperature: config.ai.temperature,
       };
 
@@ -262,6 +306,17 @@ export class MessageCreateHandler implements IMessageHandler {
       let geminiResponse = await this.geminiService.generateContent(
         geminiOptions
       );
+
+      logger.debug("Initial Gemini response", {
+        hasText: !!geminiResponse.text,
+        textLength: geminiResponse.text?.length || 0,
+        hasFunctionCalls: !!(
+          geminiResponse.functionCalls &&
+          geminiResponse.functionCalls.length > 0
+        ),
+        functionCallsCount: geminiResponse.functionCalls?.length || 0,
+        functionCallingEnabled: geminiOptions.functionCallingEnabled,
+      });
 
       // Update rate limits
       await this.rateLimitService.updateCounters(availableModel, {
@@ -276,15 +331,51 @@ export class MessageCreateHandler implements IMessageHandler {
       ) {
         const functionCall = geminiResponse.functionCalls[0];
 
+        logger.debug("Function call received from Gemini", {
+          functionName: functionCall?.name,
+          hasArgs: !!functionCall?.args,
+          args: functionCall?.args,
+          searchAvailable,
+        });
+
         if (
           functionCall &&
           functionCall.name === "search_web" &&
           searchAvailable &&
           functionCall.args
         ) {
-          // Execute search
+          // Execute search with enhanced query
+          let enhancedQuery = functionCall.args.query as string;
+
+          // Generic query optimization for better Japanese results
+          const currentDate = new Date();
+          const dateStr = `${currentDate.getFullYear()}年${
+            currentDate.getMonth() + 1
+          }月${currentDate.getDate()}日`;
+
+          // Add current date context for time-sensitive queries
+          if (
+            enhancedQuery.includes("今日") ||
+            enhancedQuery.includes("current") ||
+            enhancedQuery.includes("最新") ||
+            enhancedQuery.includes("recent")
+          ) {
+            enhancedQuery = `${enhancedQuery} ${dateStr}`;
+          }
+
+          // Add "詳細" (details) for better content extraction
+          enhancedQuery = `${enhancedQuery} 詳細`;
+
+          logger.debug("Enhanced query for comprehensive results", {
+            originalQuery: functionCall.args.query,
+            enhancedQuery,
+            strategy:
+              "Generic enhancement with date context and detail request",
+            currentDate: dateStr,
+          });
+
           const searchQuery: SearchQuery = {
-            query: functionCall.args.query as string,
+            query: enhancedQuery,
             region:
               (functionCall.args.region as "JP" | "US" | "global") || "JP",
             count: config.search.defaults.count,
@@ -293,13 +384,141 @@ export class MessageCreateHandler implements IMessageHandler {
           const searchResults = await this.braveSearchService.search(
             searchQuery
           );
-          const formattedResults =
-            this.braveSearchService.formatResultsForDiscord(searchResults);
 
-          // Generate final response with search results
+          // Get specific content from top search results with source attribution
+          let specificContent = "";
+          const sourceUrls: Array<{ title: string; url: string }> = [];
+          const topResults = searchResults.results.slice(0, 2); // Get top 2 URLs
+
+          for (const result of topResults) {
+            try {
+              logger.debug("Fetching specific content from URL", {
+                url: result.url,
+                title: result.title,
+              });
+
+              // Create appropriate prompt based on search type for content extraction
+              // Note: This could be used with WebFetch tool for more advanced content processing
+
+              // Use WebFetch tool to get actual page content
+              try {
+                // Skip certain domains that might be problematic
+                if (
+                  result.url.includes("youtube.com") ||
+                  result.url.includes("twitter.com") ||
+                  result.url.includes("instagram.com")
+                ) {
+                  continue;
+                }
+
+                // Create a simple extraction request with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const response = await fetch(result.url, {
+                  headers: {
+                    "User-Agent": "Mozilla/5.0 (compatible; Gemiscord/1.0)",
+                  },
+                  signal: controller.signal,
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                  const html = await response.text();
+                  const textContent = html
+                    .replace(
+                      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+                      ""
+                    )
+                    .replace(
+                      /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
+                      ""
+                    )
+                    .replace(/<[^>]+>/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .slice(0, 1000); // First 1000 chars
+
+                  if (textContent.length > 50) {
+                    specificContent += `\n\n【${result.title}からの情報】\n${textContent}\n`;
+                    sourceUrls.push({ title: result.title, url: result.url });
+                    logger.debug("Successfully extracted content", {
+                      url: result.url,
+                      contentLength: textContent.length,
+                    });
+                  }
+                }
+              } catch (fetchError) {
+                logger.debug("Content extraction failed", {
+                  url: result.url,
+                  error:
+                    fetchError instanceof Error
+                      ? fetchError.message
+                      : String(fetchError),
+                });
+              }
+            } catch (error) {
+              logger.warn("Failed to fetch content from URL", {
+                url: result.url,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+
+          logger.debug("Processing search results with WebFetch integration", {
+            resultCount: searchResults.results.length,
+            query: enhancedQuery,
+            specificContentLength: specificContent.length,
+          });
+
+          const formattedResults =
+            this.braveSearchService.formatResultsForGemini(searchResults);
+
+          // Track search usage in general statistics
+          await configService.incrementStats("search_usage", 1);
+
+          // Add current date context to avoid confusion
+          const currentDateStr = `${currentDate.getFullYear()}年${
+            currentDate.getMonth() + 1
+          }月${currentDate.getDate()}日`;
+
+          // Generate final response with search results and specific content
+          const finalSystemPrompt = `あなたはDiscord用の親切なAIアシスタントです。今日は${currentDateStr}です。
+
+${
+  specificContent ? "以下の具体的情報と" : "以下の"
+}検索結果を参考にして、ユーザーの質問に具体的で正確な情報を含めて日本語で回答してください。
+
+${
+  specificContent
+    ? `具体的情報:
+${specificContent}
+
+`
+    : ""
+}検索結果:
+${formattedResults}
+
+重要指示:
+- 今日の日付は${currentDateStr}です
+- 具体的な数値や詳細情報がある場合は必ず含めてください
+- 天気の場合：気温、湿度、降水確率などの具体的数値
+- ニュースの場合：企業名、発表日、具体的内容
+- 日付の場合：正確な年月日と曜日
+- サイトの紹介ではなく、実際の情報を提供してください
+- 回答の最後に参考リンクを追加してください${
+            sourceUrls.length > 0
+              ? "\n\n参考リンク:\n" +
+                sourceUrls
+                  .map((source) => `• [${source.title}](<${source.url}>)`)
+                  .join("\n")
+              : ""
+          }`;
+
           const finalOptions: GeminiGenerateOptions = {
             model: availableModel,
-            systemPrompt: `${systemPrompt}\n\n以下の検索結果を参考にして回答してください：\n${formattedResults}`,
+            systemPrompt: finalSystemPrompt,
             userMessage: context.sanitizedContent,
             functionCallingEnabled: false, // No more function calls needed
           };
@@ -324,12 +543,14 @@ export class MessageCreateHandler implements IMessageHandler {
             functionCall.args
           );
 
-          // Generate response with character count result
+          // Generate response with character count result (without function calling instructions)
+          const finalSystemPrompt = `あなたはDiscord用の親切なAIアシスタントです。文字数カウント結果を参考にして、ユーザーの質問に日本語で回答してください。
+
+文字数カウント結果: ${JSON.stringify(result)}`;
+
           const finalOptions: GeminiGenerateOptions = {
             model: availableModel,
-            systemPrompt: `${systemPrompt}\n\n文字数カウント結果: ${JSON.stringify(
-              result
-            )}`,
+            systemPrompt: finalSystemPrompt,
             userMessage: context.sanitizedContent,
             functionCallingEnabled: false,
           };
@@ -346,10 +567,18 @@ export class MessageCreateHandler implements IMessageHandler {
         }
       }
 
-      return (
+      const finalResponse =
         geminiResponse.text ||
-        "申し訳ございません。応答を生成できませんでした。"
-      );
+        "申し訳ございません。応答を生成できませんでした。";
+
+      logger.debug("Generated AI response", {
+        hasText: !!geminiResponse.text,
+        textLength: geminiResponse.text?.length || 0,
+        finalResponseLength: finalResponse.length,
+        isDefaultMessage: !geminiResponse.text,
+      });
+
+      return finalResponse;
     } catch (error) {
       logger.error("Error generating AI response:", error);
 
@@ -371,39 +600,62 @@ export class MessageCreateHandler implements IMessageHandler {
   ): Promise<void> {
     const config = configManager.getConfig();
     try {
+      logger.debug("Starting sendResponse", {
+        responseLength: response.length,
+        willSplit: response.length > 2000,
+      });
+
       // Check Discord message limit (2000 characters)
       if (response.length <= 2000) {
+        logger.debug("Sending single message reply");
         await message.reply({
           content: response,
           allowedMentions: { repliedUser: true },
         });
+        logger.debug("Single message reply sent successfully");
       } else {
         // Split message for long responses
+        logger.debug("Splitting long message");
         const messageParts = this.splitMessage(
           response,
           config.ui.messaging.preview_length
         );
 
+        logger.debug("Split message into parts", {
+          totalParts: messageParts.length,
+          partLengths: messageParts.map((part) => part.length),
+        });
+
         for (let i = 0; i < messageParts.length; i++) {
           const part = messageParts[i];
+          if (!part) continue; // Skip if part is undefined
+
           const partIndicator =
             messageParts.length > 1 ? ` (${i + 1}/${messageParts.length})` : "";
+
+          logger.debug(`Sending message part ${i + 1}/${messageParts.length}`, {
+            partLength: part.length,
+            isFirstPart: i === 0,
+          });
 
           if (i === 0) {
             await message.reply({
               content: part + partIndicator,
               allowedMentions: { repliedUser: true },
             });
+            logger.debug("First part sent as reply");
           } else {
             // Check if channel supports sending messages
             if ("send" in message.channel) {
               await message.channel.send(part + partIndicator);
+              logger.debug("Additional part sent to channel");
             } else {
               // Fallback: reply to the original message
               await message.reply({
                 content: part + partIndicator,
                 allowedMentions: { repliedUser: false },
               });
+              logger.debug("Additional part sent as reply (fallback)");
             }
           }
 
@@ -414,11 +666,79 @@ export class MessageCreateHandler implements IMessageHandler {
             );
           }
         }
+
+        logger.debug("All message parts sent successfully");
       }
     } catch (error) {
       logger.error("Error sending response:", error);
       throw error;
     }
+  }
+
+  private async convertAttachmentsForGemini(
+    attachments: any[]
+  ): Promise<GeminiAttachment[]> {
+    if (!attachments || attachments.length === 0) {
+      return [];
+    }
+
+    const geminiAttachments: GeminiAttachment[] = [];
+
+    for (const attachment of attachments) {
+      try {
+        // Only process attachments that are supported by Gemini
+        if (!attachment.isSupportedByGemini) {
+          logger.debug("Skipping unsupported attachment", {
+            name: attachment.name,
+            contentType: attachment.contentType,
+            size: attachment.size,
+          });
+          continue;
+        }
+
+        // Download the attachment
+        const response = await fetch(attachment.url);
+        if (!response.ok) {
+          logger.warn("Failed to download attachment", {
+            url: attachment.url,
+            status: response.status,
+          });
+          continue;
+        }
+
+        const buffer = Buffer.from(await response.arrayBuffer());
+
+        // Upload to Gemini
+        const geminiFile = await this.geminiService.uploadFile(
+          buffer,
+          attachment.contentType,
+          attachment.name
+        );
+
+        // Create correct GeminiAttachment structure
+        const geminiAttachment: GeminiAttachment = {
+          fileData: {
+            mimeType: geminiFile.mimeType,
+            fileUri: geminiFile.uri,
+          },
+        };
+
+        geminiAttachments.push(geminiAttachment);
+
+        logger.debug("Successfully converted attachment for Gemini", {
+          originalName: attachment.name,
+          geminiUri: geminiFile.uri,
+          mimeType: geminiFile.mimeType,
+        });
+      } catch (error) {
+        logger.error("Failed to convert attachment for Gemini", {
+          attachment: attachment.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return geminiAttachments;
   }
 
   private splitMessage(content: string, maxLength: number): string[] {
@@ -444,9 +764,9 @@ export class MessageCreateHandler implements IMessageHandler {
         // If single paragraph is too long, split by sentences
         if (paragraph.length > maxLength) {
           const sentences = paragraph.split("。");
-          for (const sentence of sentences) {
-            if ((currentPart + sentence + "。").length <= maxLength) {
-              currentPart += sentence + "。";
+          for (let sentenceText of sentences) {
+            if ((currentPart + sentenceText + "。").length <= maxLength) {
+              currentPart += sentenceText + "。";
             } else {
               if (currentPart) {
                 parts.push(currentPart.trim());
@@ -454,16 +774,17 @@ export class MessageCreateHandler implements IMessageHandler {
               }
 
               // If single sentence is still too long, force split
-              if (sentence.length > maxLength) {
-                while (sentence.length > maxLength) {
-                  parts.push(sentence.substring(0, maxLength));
-                  sentence.substring(maxLength);
+              if (sentenceText.length > maxLength) {
+                let remainingSentence = sentenceText;
+                while (remainingSentence.length > maxLength) {
+                  parts.push(remainingSentence.substring(0, maxLength));
+                  remainingSentence = remainingSentence.substring(maxLength);
                 }
-                if (sentence.length > 0) {
-                  currentPart = sentence;
+                if (remainingSentence.length > 0) {
+                  currentPart = remainingSentence;
                 }
               } else {
-                currentPart = sentence + "。";
+                currentPart = sentenceText + "。";
               }
             }
           }

@@ -145,6 +145,11 @@ const commands = [
             .setRequired(true)
         )
     )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("reset")
+        .setDescription("Reset search usage counter for debugging")
+    )
     .toJSON(),
 
   // /model command - AI model information and statistics

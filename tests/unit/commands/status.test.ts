@@ -1,14 +1,11 @@
-import {
-  describe,
-  expect,
-  it,
-  mock,
-} from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 
 describe("Status Command Tests", () => {
   describe("Basic functionality", () => {
     it("should be importable", async () => {
-      const { handleStatusCommand } = await import("../../../src/commands/status.js");
+      const { handleStatusCommand } = await import(
+        "../../../src/commands/status.js"
+      );
       expect(typeof handleStatusCommand).toBe("function");
     });
 
@@ -48,8 +45,10 @@ describe("Status Command Tests", () => {
 
   describe("Helper function validation", () => {
     it("should validate interaction helpers are importable", async () => {
-      const helpers = await import("../../../src/handlers/interactionCreate.js");
-      
+      const helpers = await import(
+        "../../../src/handlers/interactionCreate.js"
+      );
+
       expect(typeof helpers.hasAdminPermission).toBe("function");
       expect(typeof helpers.sendPermissionDenied).toBe("function");
       expect(typeof helpers.formatUptime).toBe("function");

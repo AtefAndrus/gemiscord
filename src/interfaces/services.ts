@@ -64,9 +64,10 @@ export interface IConfigService {
   isSearchEnabled(guildId: string): Promise<boolean>;
   getSearchUsage(): Promise<number>;
   incrementSearchUsage(): Promise<void>;
+  resetSearchUsage(): Promise<void>;
 
   // Statistics
-  getStats(): Promise<UsageStats>;
+  getStats(availableModels?: string[]): Promise<UsageStats>;
   incrementStats(key: string, value?: number): Promise<void>;
 
   // Cleanup old data

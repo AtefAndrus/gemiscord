@@ -266,5 +266,7 @@ export const CONFIG_KEYS = {
     TOTAL_REQUESTS: "stats:total_requests",
     MODEL_USAGE: (model: string) => `stats:model_usage:${model}`,
     SEARCH_USAGE: "stats:search_usage",
+    TOTAL_STARTUPS: "stats:total_startups",
+    CURRENT_GUILDS: "stats:current_guilds",
   },
 } as const;

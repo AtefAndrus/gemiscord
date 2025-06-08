@@ -1,6 +1,14 @@
 // Unit tests for BraveSearchService
 
-import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import { BraveSearchService } from "../../../src/services/braveSearch.js";
 import { ConfigService } from "../../../src/services/config.js";
 import { ConfigManager } from "../../../src/services/configManager.js";
@@ -64,7 +72,10 @@ describe("BraveSearchService", () => {
     (mockFetch as any).mockClear?.();
 
     // Create new service instance
-    braveSearchService = new BraveSearchService(mockConfigService, mockConfigManager);
+    braveSearchService = new BraveSearchService(
+      mockConfigService,
+      mockConfigManager
+    );
   });
 
   afterEach(() => {
@@ -91,34 +102,12 @@ describe("BraveSearchService", () => {
   });
 
   describe("initialize", () => {
-    it("should initialize successfully with valid API", async () => {
-      // Mock successful API response
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            web: { results: [] },
-          }),
-      } as any);
-
+    it("should initialize successfully (skipping API test to avoid rate limits)", async () => {
+      // No API call should be made during initialization anymore
       await expect(braveSearchService.initialize()).resolves.toBeUndefined();
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("api.search.brave.com"),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            "X-Subscription-Token": "test-api-key",
-          }),
-        })
-      );
-    });
-
-    it("should throw error when API test fails", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
-      await expect(braveSearchService.initialize()).rejects.toThrow(
-        "Failed to initialize Brave Search service"
-      );
+      // Verify no fetch call was made during initialization
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
@@ -176,13 +165,25 @@ describe("BraveSearchService", () => {
       spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
 
       // Mock incrementUsage
-      spyOn(braveSearchService, "incrementUsage" as any)
-        .mockResolvedValue(undefined);
+      spyOn(braveSearchService, "incrementUsage" as any).mockResolvedValue(
+        undefined
+      );
     });
 
     it("should perform search successfully", async () => {
+      // Mock ConfigService methods for rate limiting
+      const mockGetRateLimitValue = mock().mockResolvedValue(0);
+      const mockSetRateLimitValue = mock().mockResolvedValue(undefined);
+      (braveSearchService as any).configService.getRateLimitValue =
+        mockGetRateLimitValue;
+      (braveSearchService as any).configService.setRateLimitValue =
+        mockSetRateLimitValue;
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Map([["content-type", "application/json"]]),
         json: () => Promise.resolve(mockApiResponse),
       } as any);
 
@@ -215,19 +216,34 @@ describe("BraveSearchService", () => {
 
     it("should handle quota exceeded error", async () => {
       spyOn(braveSearchService, "canSearch").mockResolvedValue(false);
+      spyOn(braveSearchService, "getUsageStats").mockResolvedValue({
+        monthlyUsage: 2000,
+        remainingQueries: 0,
+      });
 
       await expect(braveSearchService.search(mockSearchQuery)).rejects.toThrow(
-        "Search quota exceeded for this month"
+        "Monthly search quota exceeded"
       );
     });
 
     it("should handle API error responses", async () => {
       spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
 
+      // Mock ConfigService methods for rate limiting
+      const mockGetRateLimitValue = mock().mockResolvedValue(0);
+      const mockSetRateLimitValue = mock().mockResolvedValue(undefined);
+      (braveSearchService as any).configService.getRateLimitValue =
+        mockGetRateLimitValue;
+      (braveSearchService as any).configService.setRateLimitValue =
+        mockSetRateLimitValue;
+
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 429,
         statusText: "Too Many Requests",
+        headers: new Map(),
+        text: () => Promise.resolve("Rate limit exceeded"),
+        url: "https://api.search.brave.com/res/v1/web/search",
       } as any);
 
       await expect(braveSearchService.search(mockSearchQuery)).rejects.toThrow(
@@ -238,11 +254,19 @@ describe("BraveSearchService", () => {
     it("should handle network errors", async () => {
       spyOn(braveSearchService, "canSearch").mockResolvedValue(true);
 
+      // Mock ConfigService methods for rate limiting
+      const mockGetRateLimitValue = mock().mockResolvedValue(0);
+      const mockSetRateLimitValue = mock().mockResolvedValue(undefined);
+      (braveSearchService as any).configService.getRateLimitValue =
+        mockGetRateLimitValue;
+      (braveSearchService as any).configService.setRateLimitValue =
+        mockSetRateLimitValue;
+
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-      await expect(
-        braveSearchService.search(mockSearchQuery)
-      ).rejects.toThrow();
+      await expect(braveSearchService.search(mockSearchQuery)).rejects.toThrow(
+        "Network error"
+      );
     });
   });
 
@@ -260,8 +284,9 @@ describe("BraveSearchService", () => {
     });
 
     it("should handle errors and return default values", async () => {
-      (mockConfigService.getSearchUsage as any)
-        .mockRejectedValue(new Error("DB error"));
+      (mockConfigService.getSearchUsage as any).mockRejectedValue(
+        new Error("DB error")
+      );
 
       const stats = await braveSearchService.getUsageStats();
 
@@ -308,12 +333,46 @@ describe("BraveSearchService", () => {
     });
 
     it("should return false on error", async () => {
-      spyOn(braveSearchService, "getUsageStats")
-        .mockRejectedValue(new Error("Error"));
+      spyOn(braveSearchService, "getUsageStats").mockRejectedValue(
+        new Error("Error")
+      );
 
       const canSearch = await braveSearchService.canSearch();
 
       expect(canSearch).toBe(false);
+    });
+  });
+
+  describe("parameter mapping", () => {
+    it("should map region to correct language and UI language", () => {
+      // Access private methods for testing
+      const service = braveSearchService as any;
+
+      expect(service.mapRegionToLanguage("JP")).toBe("ja");
+      expect(service.mapRegionToLanguage("US")).toBe("en");
+      expect(service.mapRegionToLanguage("global")).toBe("en");
+
+      expect(service.mapRegionToUILanguage("JP")).toBe("ja-JP");
+      expect(service.mapRegionToUILanguage("US")).toBe("en-US");
+      expect(service.mapRegionToUILanguage("global")).toBe("en-US");
+    });
+
+    it("should map freshness values to API format", () => {
+      const service = braveSearchService as any;
+
+      expect(service.mapFreshnessToAPI("day")).toBe("pd");
+      expect(service.mapFreshnessToAPI("week")).toBe("pw");
+      expect(service.mapFreshnessToAPI("month")).toBe("pm");
+      expect(service.mapFreshnessToAPI("year")).toBe("py");
+      expect(service.mapFreshnessToAPI("pd")).toBe("pd"); // Should pass through API format
+    });
+
+    it("should map region to correct country code", () => {
+      const service = braveSearchService as any;
+
+      expect(service.mapRegionToCountry("JP")).toBe("JP");
+      expect(service.mapRegionToCountry("US")).toBe("US");
+      expect(service.mapRegionToCountry("global")).toBe("");
     });
   });
 

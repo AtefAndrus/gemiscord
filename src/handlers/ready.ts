@@ -114,7 +114,9 @@ export class ReadyHandler implements IReadyHandler {
       }
 
       // Check database connection
-      const stats = await configService.getStats();
+      const config2 = configManager.getConfig();
+      const availableModels = config2.api.gemini.models.available;
+      const stats = await configService.getStats(availableModels);
       logger.debug("Health check passed", {
         memory: Math.round(heapUsed / 1024 / 1024),
         stats,
@@ -183,13 +185,13 @@ export class ReadyHandler implements IReadyHandler {
       // Log startup in stats
       await configService.incrementStats("total_startups", 1);
 
-      // Store current guild count
-      await configService.incrementStats(
-        "current_guilds",
-        client.guilds.cache.size
-      );
+      // Set current guild count (overwrite, not increment)
+      await configService.setStat("current_guilds", client.guilds.cache.size);
 
-      logger.debug("Startup statistics updated");
+      logger.debug("Startup statistics updated", {
+        total_startups: "+1",
+        current_guilds: client.guilds.cache.size,
+      });
     } catch (error) {
       logger.error("Failed to update startup statistics:", error);
     }
