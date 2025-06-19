@@ -249,8 +249,7 @@ export class ConfigManager implements IConfigManager {
       "function_calling.search_function.name",
       "function_calling.character_count_function.name",
       "response_handling.message_limit_strategy",
-      "api.gemini.models.primary",
-      "api.gemini.models.fallback",
+      "api.gemini.models.models",
     ];
 
     for (const path of requiredPaths) {
@@ -270,6 +269,24 @@ export class ConfigManager implements IConfigManager {
       throw new ConfigurationError(
         'Invalid message_limit_strategy. Must be "compress" or "split"'
       );
+    }
+
+    // Validate models array
+    const models = this.config.api.gemini.models.models;
+    if (!Array.isArray(models) || models.length === 0) {
+      throw new ConfigurationError(
+        "api.gemini.models.models must be a non-empty array of model names"
+      );
+    }
+
+    // Validate each model name is a non-empty string
+    for (let i = 0; i < models.length; i++) {
+      const model = models[i];
+      if (typeof model !== "string" || model.trim() === "") {
+        throw new ConfigurationError(
+          `Invalid model at index ${i}: must be a non-empty string`
+        );
+      }
     }
 
     logger.debug("Configuration validation passed");

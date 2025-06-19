@@ -281,8 +281,9 @@ describe("Slash Commands Integration Tests", () => {
       expect(config).toBeDefined();
 
       if (config.api?.gemini?.models) {
-        expect(config.api.gemini.models).toHaveProperty("primary");
-        expect(config.api.gemini.models).toHaveProperty("fallback");
+        expect(config.api.gemini.models).toHaveProperty("models");
+        expect(config.api.gemini.models.models).toBeInstanceOf(Array);
+        expect(config.api.gemini.models.models.length).toBeGreaterThan(0);
       }
     });
 

@@ -33,13 +33,19 @@ export class GeminiService implements IGeminiService {
 
     this.configManager = configManager;
     this.client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    this.currentModel =
-      this.configManager.getConfig().api.gemini.models.primary;
+    const models = this.configManager.getConfig().api.gemini.models.models;
+    if (!models || models.length === 0) {
+      throw new Error("No models configured in api.gemini.models.models");
+    }
+    const firstModel = models[0];
+    if (!firstModel) {
+      throw new Error("First model in configuration is invalid");
+    }
+    this.currentModel = firstModel;
 
     logger.info("GeminiService initialized", {
       defaultModel: this.currentModel,
-      modelsAvailable:
-        this.configManager.getConfig().api.gemini.models.available,
+      modelsAvailable: this.configManager.getConfig().api.gemini.models.models,
     });
   }
 
@@ -265,7 +271,7 @@ export class GeminiService implements IGeminiService {
 
   switchModel(model: string): void {
     const config = this.configManager.getConfig();
-    const availableModels = config?.api?.gemini?.models?.available;
+    const availableModels = config?.api?.gemini?.models?.models;
 
     if (!availableModels || !availableModels.includes(model)) {
       throw new APIError(`Unsupported model: ${model}`);

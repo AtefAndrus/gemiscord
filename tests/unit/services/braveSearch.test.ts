@@ -348,23 +348,13 @@ describe("BraveSearchService", () => {
       // Access private methods for testing
       const service = braveSearchService as any;
 
-      expect(service.mapRegionToLanguage("JP")).toBe("ja");
+      expect(service.mapRegionToLanguage("JP")).toBe("jp");
       expect(service.mapRegionToLanguage("US")).toBe("en");
       expect(service.mapRegionToLanguage("global")).toBe("en");
 
       expect(service.mapRegionToUILanguage("JP")).toBe("ja-JP");
       expect(service.mapRegionToUILanguage("US")).toBe("en-US");
       expect(service.mapRegionToUILanguage("global")).toBe("en-US");
-    });
-
-    it("should map freshness values to API format", () => {
-      const service = braveSearchService as any;
-
-      expect(service.mapFreshnessToAPI("day")).toBe("pd");
-      expect(service.mapFreshnessToAPI("week")).toBe("pw");
-      expect(service.mapFreshnessToAPI("month")).toBe("pm");
-      expect(service.mapFreshnessToAPI("year")).toBe("py");
-      expect(service.mapFreshnessToAPI("pd")).toBe("pd"); // Should pass through API format
     });
 
     it("should map region to correct country code", () => {

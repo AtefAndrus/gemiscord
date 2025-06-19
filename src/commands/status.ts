@@ -125,8 +125,8 @@ async function getConfigurationStatus(): Promise<ConfigurationStatus> {
       version: "3.0.0", // Phase 3 version
       environment: process.env.NODE_ENV || "development",
       models: {
-        primary: config.api?.gemini?.models?.primary || "unknown",
-        fallback: config.api?.gemini?.models?.fallback || "unknown",
+        primary: config.api?.gemini?.models?.models?.[0] || "unknown",
+        fallback: config.api?.gemini?.models?.models?.[1] || "none",
       },
     };
   } catch (error) {
@@ -148,7 +148,7 @@ async function getConfigurationStatus(): Promise<ConfigurationStatus> {
  */
 async function getApiStatus(): Promise<ApiStatus> {
   const config = configManager.getConfig();
-  const availableModels = config.api.gemini.models.available;
+  const availableModels = config.api.gemini.models.models;
   const stats = await configService.getStats(availableModels);
 
   // Get current search usage
@@ -166,8 +166,9 @@ async function getApiStatus(): Promise<ApiStatus> {
     await rateLimitService.initialize();
 
     // Check if primary model is available
-    const primaryModel = config.api.gemini.models.primary;
-    const canUseGemini = await rateLimitService.checkLimits(primaryModel);
+    const models = config.api.gemini.models.models;
+    const primaryModel = models && models.length > 0 ? models[0] : null;
+    const canUseGemini = primaryModel ? await rateLimitService.checkLimits(primaryModel) : false;
     geminiRateLimitStatus = canUseGemini ? "healthy" : "limited";
 
     // Check search availability
@@ -189,7 +190,7 @@ async function getApiStatus(): Promise<ApiStatus> {
   return {
     gemini: {
       available: process.env.GEMINI_API_KEY ? true : false,
-      currentModel: config.api.gemini.models.primary,
+      currentModel: config.api.gemini.models.models[0] || "none",
       requestsToday: stats.total_requests || 0,
       rateLimitStatus: geminiRateLimitStatus,
     },
@@ -209,7 +210,7 @@ async function getDatabaseStatus(): Promise<DatabaseStatus> {
   try {
     // Test database connectivity by getting stats
     const config = configManager.getConfig();
-    const availableModels = config.api.gemini.models.available;
+    const availableModels = config.api.gemini.models.models;
     await configService.getStats(availableModels);
 
     return {

@@ -55,10 +55,14 @@ export async function handleModelCommand(
         await handleLimitsSubcommand(interaction);
         break;
 
+      case "switch":
+        await handleSwitchSubcommand(interaction);
+        break;
+
       default:
         await interaction.reply({
           content:
-            "❌ Unknown subcommand. Available: `info`, `stats`, `limits`.",
+            "❌ Unknown subcommand. Available: `info`, `stats`, `limits`, `switch`.",
           ephemeral: configManager.getEphemeralSetting("model"),
         });
     }
@@ -97,8 +101,15 @@ async function handleInfoSubcommand(
 
   try {
     const config = configManager.getConfig();
-    const primaryModel = config.api?.gemini?.models?.primary || "unknown";
-    const fallbackModel = config.api?.gemini?.models?.fallback || "unknown";
+    const models = config.api?.gemini?.models?.models || [];
+    const primaryModel = models[0] || "unknown"; // Highest priority model
+    const fallbackModel = models[1] || "none"; // Second priority model (if exists)
+    const guildId = interaction.guild?.id;
+
+    // Get preferred model for this guild
+    const preferredModel = guildId
+      ? await configService.getPreferredModel(guildId)
+      : null;
 
     // Get rate limit configuration from config
     const rateLimits = config.api.gemini.rate_limits;
@@ -124,6 +135,26 @@ async function handleInfoSubcommand(
       ].join("\n"),
       inline: true,
     });
+
+    // Preferred Model (if set)
+    if (preferredModel) {
+      const preferredRateLimit = rateLimits[preferredModel];
+      embed.addFields({
+        name: "⭐ Preferred Model",
+        value: [
+          `**Name:** ${preferredModel}`,
+          preferredRateLimit
+            ? `**RPM:** ${preferredRateLimit.rpm || "Unknown"}`
+            : "",
+          preferredRateLimit
+            ? `**TPM:** ${preferredRateLimit.tpm || "Unknown"}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        inline: true,
+      });
+    }
 
     // Primary Model Information
     if (primaryRateLimit) {
@@ -154,13 +185,13 @@ async function handleInfoSubcommand(
     }
 
     // Available Models
-    const availableModels =
-      configManager.getConfig().api.gemini.models.available;
+    const availableModels = configManager.getConfig().api.gemini.models.models;
     embed.addFields({
-      name: "📋 Available Models",
+      name: "📋 Available Models (Priority Order)",
       value:
-        availableModels.map((model) => `• ${model}`).join("\n") ||
-        "None configured",
+        availableModels
+          .map((model, index) => `${index + 1}. ${model}`)
+          .join("\n") || "None configured",
       inline: false,
     });
 
@@ -207,12 +238,11 @@ async function handleStatsSubcommand(
   try {
     // Get actual statistics from configService
     const config = configManager.getConfig();
-    const availableModels = config.api.gemini.models.available;
+    const availableModels = config.api.gemini.models.models;
     const stats = await configService.getStats(availableModels);
-    const primaryModel =
-      config.api?.gemini?.models?.primary || "gemini-2.5-flash-preview-05-20";
-    const fallbackModel =
-      config.api?.gemini?.models?.fallback || "gemini-2.0-flash";
+    const models = config.api?.gemini?.models?.models || [];
+    const primaryModel = models[0] || "unknown"; // Highest priority model
+    const fallbackModel = models[1] || "none"; // Second priority model (if exists)
 
     const embed = new EmbedBuilder()
       .setTitle("📊 Model Usage Statistics")
@@ -272,7 +302,7 @@ async function handleStatsSubcommand(
       value: [
         `**Primary RPM:** ${primaryLimits?.rpm || "Unknown"}`,
         `**Primary TPM:** ${primaryLimits?.tpm?.toLocaleString() || "Unknown"}`,
-        `**Models Available:** ${config.api.gemini.models.available.length}`,
+        `**Models Available:** ${config.api.gemini.models.models.length}`,
       ].join("\n"),
       inline: true,
     });
@@ -324,10 +354,11 @@ async function handleLimitsSubcommand(
 
   try {
     const config = configManager.getConfig();
-    const availableModels = config.api.gemini.models.available;
+    const availableModels = config.api.gemini.models.models;
     const stats = await configService.getStats(availableModels);
-    const primaryModel = config.api?.gemini?.models?.primary || "unknown";
-    const fallbackModel = config.api?.gemini?.models?.fallback || "unknown";
+    const models = config.api?.gemini?.models?.models || [];
+    const primaryModel = models[0] || "unknown"; // Highest priority model
+    const fallbackModel = models[1] || "none"; // Second priority model (if exists)
 
     const embed = new EmbedBuilder()
       .setTitle("⚖️ Rate Limits & Quotas")
@@ -412,6 +443,95 @@ async function handleLimitsSubcommand(
     await interaction.editReply({
       content:
         "❌ Failed to retrieve rate limit information. Please try again later.",
+    });
+  }
+}
+
+/**
+ * Handle model switch subcommand
+ */
+async function handleSwitchSubcommand(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
+  await interaction.deferReply({
+    flags: configManager.getEphemeralSetting("model")
+      ? MessageFlags.Ephemeral
+      : undefined,
+  });
+
+  try {
+    const selectedModel = interaction.options.getString("model", true);
+    const guildId = interaction.guild?.id;
+
+    if (!guildId) {
+      await interaction.editReply({
+        content: "❌ This command can only be used in a server.",
+      });
+      return;
+    }
+
+    // Validate that the model is in the available models list
+    const config = configManager.getConfig();
+    const availableModels = config.api.gemini.models.models;
+
+    if (!availableModels.includes(selectedModel)) {
+      await interaction.editReply({
+        content: `❌ Invalid model. Available models: ${availableModels.join(
+          ", "
+        )}`,
+      });
+      return;
+    }
+
+    // Set the preferred model for this guild
+    await configService.setPreferredModel(guildId, selectedModel);
+
+    const embed = new EmbedBuilder()
+      .setTitle("✅ Model Switched Successfully")
+      .setColor(0x00ff00)
+      .setTimestamp()
+      .setDescription(
+        `The preferred model for this server has been set to **${selectedModel}**.`
+      )
+      .addFields(
+        {
+          name: "🤖 Selected Model",
+          value: selectedModel,
+          inline: true,
+        },
+        {
+          name: "📝 Note",
+          value:
+            "The bot will use this model when available. If rate limited, it will automatically fallback to other available models.",
+          inline: false,
+        }
+      );
+
+    // Get model rate limits for display
+    const modelRateLimit = config.api.gemini.rate_limits[selectedModel];
+    if (modelRateLimit) {
+      embed.addFields({
+        name: "⚖️ Model Limits",
+        value: [
+          `**RPM:** ${modelRateLimit.rpm}`,
+          `**TPM:** ${modelRateLimit.tpm?.toLocaleString()}`,
+          `**RPD:** ${modelRateLimit.rpd}`,
+        ].join("\n"),
+        inline: true,
+      });
+    }
+
+    await interaction.editReply({ embeds: [embed] });
+
+    logger.info("Model switched for guild", {
+      guildId,
+      newModel: selectedModel,
+      userId: interaction.user.id,
+    });
+  } catch (error) {
+    logger.error("Failed to switch model:", error);
+    await interaction.editReply({
+      content: "❌ Failed to switch model. Please try again later.",
     });
   }
 }

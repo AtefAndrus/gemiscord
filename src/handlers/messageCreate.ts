@@ -235,7 +235,9 @@ export class MessageCreateHandler implements IMessageHandler {
   ): Promise<string> {
     try {
       // Get available model
-      const availableModel = await this.rateLimitService.getAvailableModel();
+      const availableModel = await this.rateLimitService.getAvailableModel(
+        context.guildId
+      );
       if (!availableModel) {
         return "申し訳ございません。現在利用量が上限に達しています。しばらくしてから再度お試しください。";
       }

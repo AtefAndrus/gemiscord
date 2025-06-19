@@ -383,6 +383,16 @@ async function createConfigEmbed(
     inline: true,
   });
 
+  // Preferred model
+  const preferredModel = await configService.getPreferredModel(guildId);
+  const modelDisplay = preferredModel || "Default (Auto-select)";
+
+  embed.addFields({
+    name: "🤖 Preferred Model",
+    value: modelDisplay,
+    inline: true,
+  });
+
   // Server prompt
   const hasCustomPrompt =
     config.server_prompt && config.server_prompt.length > 0;
@@ -398,8 +408,7 @@ async function createConfigEmbed(
 
   // Usage statistics
   try {
-    const availableModels =
-      configManager.getConfig().api.gemini.models.available;
+    const availableModels = configManager.getConfig().api.gemini.models.models;
     const stats = await configService.getStats(availableModels);
     const searchUsage = await configService.getSearchUsage();
 

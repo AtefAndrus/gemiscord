@@ -12,7 +12,9 @@ import {
   Routes,
   SlashCommandBuilder,
 } from "discord.js";
+import { ConfigManager } from "./services/configManager.js";
 import { logger } from "./utils/logger.js";
+import { createModelChoices } from "./utils/modelUtils.js";
 
 // Environment validation
 const token = process.env.DISCORD_TOKEN;
@@ -26,160 +28,190 @@ if (!token || !clientId) {
   process.exit(1);
 }
 
-// Command definitions based on Phase 3 requirements
-const commands = [
-  // /status command - Bot status and API usage statistics
-  new SlashCommandBuilder()
-    .setName("status")
-    .setDescription("View bot status, uptime, and API usage statistics")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .toJSON(),
+/**
+ * Create command definitions with dynamic model choices
+ */
+async function createCommands() {
+  // Load configuration to get available models
+  const configManager = new ConfigManager();
+  await configManager.loadConfig();
+  const config = configManager.getConfig();
+  const availableModels = config.api.gemini.models.models;
+  const displayNameOverrides = config.api.gemini.models.display_names;
+  const modelChoices = createModelChoices(
+    availableModels,
+    displayNameOverrides
+  );
 
-  // /config command - Guild configuration management
-  new SlashCommandBuilder()
-    .setName("config")
-    .setDescription("Manage bot configuration for this server")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("mention")
-        .setDescription("Enable or disable mention responses")
-        .addStringOption((option) =>
-          option
-            .setName("action")
-            .setDescription("Enable or disable mention responses")
-            .setRequired(true)
-            .addChoices(
-              { name: "Enable", value: "enable" },
-              { name: "Disable", value: "disable" }
-            )
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("channel")
-        .setDescription("Add or remove auto-response channels")
-        .addStringOption((option) =>
-          option
-            .setName("action")
-            .setDescription("Add or remove channel from auto-response list")
-            .setRequired(true)
-            .addChoices(
-              { name: "Add", value: "add" },
-              { name: "Remove", value: "remove" }
-            )
-        )
-        .addChannelOption((option) =>
-          option
-            .setName("target")
-            .setDescription("Channel to add or remove")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("prompt")
-        .setDescription("Set server-specific AI prompt")
-        .addStringOption((option) =>
-          option
-            .setName("content")
-            .setDescription("Custom prompt for this server")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("strategy")
-        .setDescription("Set message handling strategy")
-        .addStringOption((option) =>
-          option
-            .setName("type")
-            .setDescription("Message length handling strategy")
-            .setRequired(true)
-            .addChoices(
-              { name: "Compress", value: "compress" },
-              { name: "Split", value: "split" }
-            )
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("view")
-        .setDescription("View current server configuration")
-    )
-    .toJSON(),
+  return [
+    // /status command - Bot status and API usage statistics
+    new SlashCommandBuilder()
+      .setName("status")
+      .setDescription("View bot status, uptime, and API usage statistics")
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+      .toJSON(),
 
-  // /search command - Search functionality management
-  new SlashCommandBuilder()
-    .setName("search")
-    .setDescription("Manage web search functionality")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("toggle")
-        .setDescription("Enable or disable web search")
-        .addStringOption((option) =>
-          option
-            .setName("action")
-            .setDescription("Enable or disable web search")
-            .setRequired(true)
-            .addChoices(
-              { name: "Enable", value: "enable" },
-              { name: "Disable", value: "disable" }
-            )
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("quota")
-        .setDescription("View current search API usage and quota")
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("test")
-        .setDescription("Perform a test search to verify functionality")
-        .addStringOption((option) =>
-          option
-            .setName("query")
-            .setDescription("Test search query")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("reset")
-        .setDescription("Reset search usage counter for debugging")
-    )
-    .toJSON(),
+    // /config command - Guild configuration management
+    new SlashCommandBuilder()
+      .setName("config")
+      .setDescription("Manage bot configuration for this server")
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("mention")
+          .setDescription("Enable or disable mention responses")
+          .addStringOption((option) =>
+            option
+              .setName("action")
+              .setDescription("Enable or disable mention responses")
+              .setRequired(true)
+              .addChoices(
+                { name: "Enable", value: "enable" },
+                { name: "Disable", value: "disable" }
+              )
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("channel")
+          .setDescription("Add or remove auto-response channels")
+          .addStringOption((option) =>
+            option
+              .setName("action")
+              .setDescription("Add or remove channel from auto-response list")
+              .setRequired(true)
+              .addChoices(
+                { name: "Add", value: "add" },
+                { name: "Remove", value: "remove" }
+              )
+          )
+          .addChannelOption((option) =>
+            option
+              .setName("target")
+              .setDescription("Channel to add or remove")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("prompt")
+          .setDescription("Set server-specific AI prompt")
+          .addStringOption((option) =>
+            option
+              .setName("content")
+              .setDescription("Custom prompt for this server")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("strategy")
+          .setDescription("Set message handling strategy")
+          .addStringOption((option) =>
+            option
+              .setName("type")
+              .setDescription("Message length handling strategy")
+              .setRequired(true)
+              .addChoices(
+                { name: "Compress", value: "compress" },
+                { name: "Split", value: "split" }
+              )
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("view")
+          .setDescription("View current server configuration")
+      )
+      .toJSON(),
 
-  // /model command - AI model information and statistics
-  new SlashCommandBuilder()
-    .setName("model")
-    .setDescription("View AI model information and usage statistics")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("info")
-        .setDescription("View current active AI model information")
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("stats")
-        .setDescription("View model usage statistics and performance metrics")
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("limits")
-        .setDescription("View current rate limits and quota status")
-    )
-    .toJSON(),
-];
+    // /search command - Search functionality management
+    new SlashCommandBuilder()
+      .setName("search")
+      .setDescription("Manage web search functionality")
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("toggle")
+          .setDescription("Enable or disable web search")
+          .addStringOption((option) =>
+            option
+              .setName("action")
+              .setDescription("Enable or disable web search")
+              .setRequired(true)
+              .addChoices(
+                { name: "Enable", value: "enable" },
+                { name: "Disable", value: "disable" }
+              )
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("quota")
+          .setDescription("View current search API usage and quota")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("test")
+          .setDescription("Perform a test search to verify functionality")
+          .addStringOption((option) =>
+            option
+              .setName("query")
+              .setDescription("Test search query")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("reset")
+          .setDescription("Reset search usage counter for debugging")
+      )
+      .toJSON(),
+
+    // /model command - AI model information and statistics
+    new SlashCommandBuilder()
+      .setName("model")
+      .setDescription("View AI model information and usage statistics")
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("info")
+          .setDescription("View current active AI model information")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("stats")
+          .setDescription("View model usage statistics and performance metrics")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("limits")
+          .setDescription("View current rate limits and quota status")
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName("switch")
+          .setDescription("Switch to a different AI model")
+          .addStringOption((option) =>
+            option
+              .setName("model")
+              .setDescription("The model to switch to")
+              .setRequired(true)
+              .addChoices(...modelChoices)
+          )
+      )
+      .toJSON(),
+  ];
+}
 
 /**
  * Register commands with Discord API
  */
 async function registerCommands(): Promise<void> {
   try {
+    // Create commands with dynamic model choices
+    const commands = await createCommands();
+
     logger.info(
       `Starting registration of ${commands.length} slash commands...`
     );

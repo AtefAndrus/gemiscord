@@ -20,6 +20,8 @@ const mockConfigService = {
   setRateLimitValue: mock(),
   hasRateLimitKey: mock(),
   deleteRateLimitKey: mock(),
+  incrementStats: mock(),
+  getPreferredModel: mock(),
 } as unknown as ConfigService;
 
 describe("RateLimitService", () => {
@@ -35,6 +37,18 @@ describe("RateLimitService", () => {
     (mockConfigService.setRateLimitValue as any).mockClear();
     (mockConfigService.hasRateLimitKey as any).mockClear();
     (mockConfigService.deleteRateLimitKey as any).mockClear();
+    (mockConfigService.incrementStats as any).mockClear();
+    (mockConfigService.getPreferredModel as any).mockClear();
+
+    // Set default mock return values
+    (mockConfigService.getSearchUsage as any).mockResolvedValue(100);
+    (mockConfigService.getRateLimitValue as any).mockResolvedValue(0);
+    (mockConfigService.setRateLimitValue as any).mockResolvedValue(undefined);
+    (mockConfigService.hasRateLimitKey as any).mockResolvedValue(false);
+    (mockConfigService.deleteRateLimitKey as any).mockResolvedValue(true);
+    (mockConfigService.setRateLimitString as any).mockResolvedValue(undefined);
+    (mockConfigService.incrementStats as any).mockResolvedValue(undefined);
+    (mockConfigService.getPreferredModel as any).mockResolvedValue(null);
 
     // Use real ConfigManager with actual config file
     configManager = new ConfigManager(testConfigDir);
@@ -61,8 +75,9 @@ describe("RateLimitService", () => {
     it("should initialize counters for all models", async () => {
       await rateLimitService.initialize();
 
-      // Should call initializeModelCounters for each model
-      const modelCount = Object.keys(GEMINI_MODELS).length;
+      // Should call initializeModelCounters for each model in rate_limits config
+      const config = configManager.getConfig();
+      const modelCount = Object.keys(config.api.gemini.rate_limits).length;
       expect(rateLimitService["initializeModelCounters"]).toHaveBeenCalledTimes(
         modelCount
       );
@@ -88,26 +103,29 @@ describe("RateLimitService", () => {
 
       const result = await rateLimitService.getAvailableModel();
 
-      // Get actual model names from config
+      // Get actual available models from config
       const config = configManager.getConfig();
-      const primaryModel = config.api.gemini.models.primary;
+      const availableModels = config.api.gemini.models.models;
 
-      expect(result).toBe(primaryModel);
-      expect(rateLimitService.checkLimits).toHaveBeenCalledWith(primaryModel);
+      // Should return the first available model from the list
+      expect(result).toBe(availableModels[0]);
+      expect(rateLimitService.checkLimits).toHaveBeenCalledWith(
+        availableModels[0]
+      );
     });
 
-    it("should return fallback model if primary is unavailable", async () => {
+    it("should return second model if first is unavailable", async () => {
       spyOn(rateLimitService, "checkLimits")
         .mockResolvedValueOnce(false) // First model not available
         .mockResolvedValueOnce(true); // Second model available
 
       const result = await rateLimitService.getAvailableModel();
 
-      // Get actual fallback model from config
+      // Get actual available models from config
       const config = configManager.getConfig();
-      const fallbackModel = config.api.gemini.models.fallback;
+      const availableModels = config.api.gemini.models.models;
 
-      expect(result).toBe(fallbackModel);
+      expect(result).toBe(availableModels[1]);
       expect(rateLimitService.checkLimits).toHaveBeenCalledTimes(2);
     });
 
@@ -126,6 +144,46 @@ describe("RateLimitService", () => {
 
       await expect(rateLimitService.getAvailableModel()).rejects.toThrow(
         "Failed to check available models"
+      );
+    });
+
+    it("should prefer guild's preferred model when available", async () => {
+      const preferredModel = "gemini-2.5-flash-lite-preview-06-17";
+      const guildId = "test-guild-123";
+
+      (mockConfigService.getPreferredModel as any).mockResolvedValue(
+        preferredModel
+      );
+      spyOn(rateLimitService, "checkLimits").mockResolvedValueOnce(true); // Preferred model is available
+
+      const result = await rateLimitService.getAvailableModel(guildId);
+
+      expect(result).toBe(preferredModel);
+      expect(mockConfigService.getPreferredModel).toHaveBeenCalledWith(guildId);
+      expect(rateLimitService.checkLimits).toHaveBeenCalledWith(preferredModel);
+    });
+
+    it("should fallback to other models if preferred is rate limited", async () => {
+      const preferredModel = "gemini-2.5-flash-lite-preview-06-17";
+      const guildId = "test-guild-123";
+
+      (mockConfigService.getPreferredModel as any).mockResolvedValue(
+        preferredModel
+      );
+      spyOn(rateLimitService, "checkLimits")
+        .mockResolvedValueOnce(false) // Preferred model is rate limited
+        .mockResolvedValueOnce(true); // First available model in list
+
+      const result = await rateLimitService.getAvailableModel(guildId);
+
+      const config = configManager.getConfig();
+      const availableModels = config.api.gemini.models.models;
+
+      expect(result).toBe(availableModels[0]);
+      expect(mockConfigService.getPreferredModel).toHaveBeenCalledWith(guildId);
+      expect(rateLimitService.checkLimits).toHaveBeenCalledWith(preferredModel);
+      expect(rateLimitService.checkLimits).toHaveBeenCalledWith(
+        availableModels[0]
       );
     });
   });
@@ -300,7 +358,9 @@ describe("RateLimitService", () => {
     it("should return status for all models", async () => {
       const statuses = await rateLimitService.getStatus();
 
-      expect(statuses).toHaveLength(Object.keys(GEMINI_MODELS).length);
+      const config = configManager.getConfig();
+      const modelCount = Object.keys(config.api.gemini.rate_limits).length;
+      expect(statuses).toHaveLength(modelCount);
       expect(statuses[0]).toMatchObject({
         model: expect.any(String),
         rpm: expect.objectContaining({
@@ -397,16 +457,13 @@ describe("RateLimitService", () => {
 
   describe("private methods", () => {
     describe("getModelsByPriority", () => {
-      it("should return models in priority order", () => {
+      it("should return all available models", () => {
         const models = rateLimitService["getModelsByPriority"]();
         const config = configManager.getConfig();
-        const primaryModel = config.api.gemini.models.primary;
-        const fallbackModel = config.api.gemini.models.fallback;
+        const availableModels = config.api.gemini.models.models;
 
-        expect(models).toContain(primaryModel);
-        expect(models).toContain(fallbackModel);
-        // Primary model should come first
-        expect(models[0]).toBe(primaryModel);
+        expect(models).toEqual(availableModels);
+        expect(models.length).toBe(availableModels.length);
       });
     });
 

@@ -17,9 +17,7 @@ describe("GeminiService", () => {
         api: {
           gemini: {
             models: {
-              primary: "gemini-2.0-flash",
-              fallback: "gemini-2.5-flash-preview-05-20",
-              available: ["gemini-2.5-flash-preview-05-20", "gemini-2.0-flash"],
+              models: ["gemini-2.0-flash", "gemini-2.5-flash-preview-05-20"],
             },
           },
         },

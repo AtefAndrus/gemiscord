@@ -70,6 +70,10 @@ export interface IConfigService {
   getStats(availableModels?: string[]): Promise<UsageStats>;
   incrementStats(key: string, value?: number): Promise<void>;
 
+  // Model preferences
+  getPreferredModel(guildId: string): Promise<string | null>;
+  setPreferredModel(guildId: string, model: string): Promise<void>;
+
   // Cleanup old data
   cleanup(): Promise<void>;
 }
@@ -121,7 +125,7 @@ export interface IRateLimitService {
   initialize(): Promise<void>;
 
   // Check availability
-  getAvailableModel(): Promise<string | null>;
+  getAvailableModel(guildId?: string): Promise<string | null>;
   checkLimits(model: string): Promise<boolean>;
   isSearchAvailable(): Promise<boolean>;
 

@@ -591,21 +591,6 @@ export class BraveSearchService implements ISearchService {
     }
   }
 
-  private mapFreshnessToAPI(freshness: string): string {
-    switch (freshness) {
-      case "day":
-        return "pd"; // Past day (24h)
-      case "week":
-        return "pw"; // Past week (7 days)
-      case "month":
-        return "pm"; // Past month (31 days)
-      case "year":
-        return "py"; // Past year (365 days)
-      default:
-        return freshness; // Return as-is if already in API format
-    }
-  }
-
   private handleSearchError(error: unknown, _query?: string): APIError {
     if (error instanceof APIError) {
       return error;

@@ -43,15 +43,39 @@ export class RateLimitService implements IRateLimitService {
     }
   }
 
-  async getAvailableModel(): Promise<string | null> {
+  async getAvailableModel(guildId?: string): Promise<string | null> {
     try {
       const models = this.getModelsByPriority();
 
+      // If a guild ID is provided, check for preferred model first
+      if (guildId) {
+        const preferredModel = await this.configService.getPreferredModel(
+          guildId
+        );
+        if (preferredModel && models.includes(preferredModel)) {
+          // Check if preferred model is available
+          if (await this.checkLimits(preferredModel)) {
+            logger.debug("Preferred model available", {
+              model: preferredModel,
+              guildId,
+              available: true,
+            });
+            return preferredModel;
+          }
+          logger.debug("Preferred model rate limited", {
+            model: preferredModel,
+            guildId,
+          });
+        }
+      }
+
+      // Check all models in order (preferred model will be checked again, but that's ok)
       for (const modelName of models) {
         if (await this.checkLimits(modelName)) {
           logger.debug("Model available", {
             model: modelName,
             available: true,
+            isPreferred: false,
           });
           return modelName;
         }
@@ -394,11 +418,8 @@ export class RateLimitService implements IRateLimitService {
   }
 
   private getModelsByPriority(): string[] {
-    // Return models in priority order based on configuration
+    // Return all models from configuration in priority order (first = highest priority)
     const config = this.configManager.getConfig();
-    return [
-      config.api.gemini.models.primary,
-      config.api.gemini.models.fallback,
-    ].filter(Boolean);
+    return config.api.gemini.models.models.filter(Boolean);
   }
 }

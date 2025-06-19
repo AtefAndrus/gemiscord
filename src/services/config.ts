@@ -369,6 +369,7 @@ export class ConfigService implements IConfigService {
       CONFIG_KEYS.GUILD.SEARCH_ENABLED(guildId),
       CONFIG_KEYS.GUILD.SERVER_PROMPT(guildId),
       CONFIG_KEYS.GUILD.MESSAGE_LIMIT_STRATEGY(guildId),
+      CONFIG_KEYS.GUILD.PREFERRED_MODEL(guildId),
     ];
 
     // Delete keys one by one to ensure each is properly cleared
@@ -424,5 +425,34 @@ export class ConfigService implements IConfigService {
 
     await this.keyv.set(statKey, value);
     logger.debug(`Stat ${key} set to ${value}`);
+  }
+
+  // Model preferences
+  async getPreferredModel(guildId: string): Promise<string | null> {
+    try {
+      const preferredModel = await this.keyv.get(
+        CONFIG_KEYS.GUILD.PREFERRED_MODEL(guildId)
+      );
+      return preferredModel || null;
+    } catch (error) {
+      logger.error(
+        `Failed to get preferred model for guild ${guildId}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  async setPreferredModel(guildId: string, model: string): Promise<void> {
+    try {
+      await this.keyv.set(CONFIG_KEYS.GUILD.PREFERRED_MODEL(guildId), model);
+      logger.info(`Set preferred model for guild ${guildId} to ${model}`);
+    } catch (error) {
+      logger.error(
+        `Failed to set preferred model for guild ${guildId}:`,
+        error
+      );
+      throw new ConfigurationError("Failed to set preferred model");
+    }
   }
 }

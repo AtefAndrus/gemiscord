@@ -115,7 +115,7 @@ export class ReadyHandler implements IReadyHandler {
 
       // Check database connection
       const config2 = configManager.getConfig();
-      const availableModels = config2.api.gemini.models.available;
+      const availableModels = config2.api.gemini.models.models;
       const stats = await configService.getStats(availableModels);
       logger.debug("Health check passed", {
         memory: Math.round(heapUsed / 1024 / 1024),

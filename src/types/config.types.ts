@@ -155,9 +155,8 @@ export interface MentionPlaceholder {
 
 export interface GeminiApiConfig {
   models: {
-    primary: string;
-    fallback: string;
-    available: string[];
+    models: string[]; // Array in priority order (first = highest priority)
+    display_names?: Record<string, string>; // Optional display name overrides
   };
   rate_limits: {
     [model: string]: ModelRateLimit;
@@ -249,6 +248,7 @@ export const CONFIG_KEYS = {
     SERVER_PROMPT: (guildId: string) => `guild:${guildId}:server_prompt`,
     MESSAGE_LIMIT_STRATEGY: (guildId: string) =>
       `guild:${guildId}:message_limit_strategy`,
+    PREFERRED_MODEL: (guildId: string) => `guild:${guildId}:preferred_model`,
   },
   CHANNEL: {
     CHANNEL_PROMPT: (channelId: string) =>
