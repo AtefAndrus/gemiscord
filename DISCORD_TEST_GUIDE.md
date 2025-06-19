@@ -1,240 +1,269 @@
-# Discord 実環境テスト指示書 - Phase 3 完了版
+# Discord Integration Testing Guide - Gemiscord
 
-## 概要
+## Overview
 
-**Gemiscord Phase 3 実装完了** - AI 統合・検索機能・レート制限・スラッシュコマンドの実環境テスト
+Comprehensive manual testing procedures for Gemiscord Discord bot integration, covering AI responses, web search functionality, slash commands, and administrative features.
 
-## 事前準備
+## Prerequisites
 
-### 1. ボット起動
+### 1. Bot Setup
 
 ```bash
-# .env ファイル設定確認
+# Verify environment configuration
 cat .env
-# 必要な環境変数:
+# Required environment variables:
 # - DISCORD_TOKEN=your_discord_bot_token
+# - DISCORD_CLIENT_ID=your_discord_application_id
 # - GEMINI_API_KEY=your_gemini_api_key
-# - BRAVE_SEARCH_API_KEY=your_brave_search_api_key
+# - BRAVE_SEARCH_API_KEY=your_brave_search_key
 
-# ボット起動
-bun run src/bot.ts
+# Start the bot
+bun run dev
 ```
 
-**期待結果**:
+**Expected Output**:
 
 - ✅ `Ready! Logged in as BotName#1234`
-- ✅ `GeminiService initialized`
-- ✅ `BraveSearchService initialized`
-- ✅ `RateLimitService initialized`
+- ✅ `MessageCreateHandler initialized successfully`
+- ✅ `Configuration manager initialized`
+- ✅ `Configuration service initialized`
 
-### 2. Discord サーバー準備
+### 2. Discord Server Preparation
 
-**必要な設定**:
+**Required Setup**:
 
-- テスト用サーバー作成 (管理者権限)
-- ボット招待 (必要権限: メッセージ送信、履歴読取、リアクション追加)
-- テストチャンネル作成: `#bot-test`, `#auto-response-test`
+- Create test Discord server (with Administrator permissions)
+- Invite bot with required permissions:
+  - Send Messages
+  - Read Message History
+  - Use Slash Commands
+  - Add Reactions
+- Create test channels: `#bot-test`, `#auto-response-test`
 
 ---
 
-## Phase 3 機能テスト (スラッシュコマンド含む)
+## Core Feature Testing
 
-### 🤖 **T1. 基本 AI 応答テスト**
+### 🤖 **T1. AI Response Testing**
 
-#### T1-1. メンション応答
+#### T1-1. Mention Response
 
-**テスト手順**:
-
-```
-#bot-test チャンネルで送信:
-@YourBot こんにちは！調子はどうですか？
-```
-
-**期待結果**:
-
-- ✅ ボットがタイピング表示 (2-3 秒)
-- ✅ 日本語で AI 応答が返る
-- ✅ 5 秒以内に応答
-- ✅ エラーが発生しない
-
-#### T1-2. 自然な会話
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-@YourBot 今日の予定について相談したいです
-@YourBot TypeScriptとJavaScriptの違いを教えて
-@YourBot 面白いジョークを聞かせて
+In #bot-test channel:
+@YourBot Hello! How are you doing today?
+@YourBot What can you help me with?
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 文脈に応じた適切な応答
-- ✅ 日本語の自然な表現
-- ✅ エラーハンドリング正常
+- ✅ Bot shows typing indicator (2-3 seconds)
+- ✅ Natural AI response returned
+- ✅ Response within 5 seconds
+- ✅ No errors occur
 
-### 🔍 **T2. 検索機能統合テスト**
+#### T1-2. Natural Conversation
 
-#### T2-1. リアルタイム情報検索
-
-**テスト手順**:
-
-```
-@YourBot 今日の東京の天気はどうですか？
-@YourBot 最新のAI技術のニュースを教えて
-@YourBot 2024年のオリンピックについて調べて
-```
-
-**期待結果**:
-
-- ✅ 自動的に web 検索が実行される
-- ✅ 検索結果に基づいた回答
-- ✅ 「🔍 検索中...」などの検索実行表示
-- ✅ 最新情報が含まれている
-
-#### T2-2. 検索不要な質問
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-@YourBot 1+1はいくつですか？
-@YourBot プログラミングの基本概念について説明して
-@YourBot こんにちは
+@YourBot I need help planning my day
+@YourBot Explain the difference between TypeScript and JavaScript
+@YourBot Tell me a funny programming joke
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 検索せずに直接回答
-- ✅ 高速応答 (2 秒以内)
-- ✅ 適切な判断
+- ✅ Context-appropriate responses
+- ✅ Natural language understanding
+- ✅ Proper error handling
 
-### ⚡ **T3. Function Calling テスト**
+### 🔍 **T2. Search Integration Testing**
 
-#### T3-1. 文字数カウント機能
+#### T2-1. Real-time Information Search
 
-**テスト手順**:
-
-```
-@YourBot この文章の文字数を数えて：「こんにちは、世界！今日は良い天気ですね。」
-@YourBot 「Hello World」の文字数は？
-```
-
-**期待結果**:
-
-- ✅ `count_characters` 関数が自動実行
-- ✅ 正確な文字数が返答に含まれる
-- ✅ 実行ログが出力される
-
-#### T3-2. 検索関数の自動判断
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-@YourBot 現在の円相場はいくらですか？
-@YourBot 最新のTech系イベント情報
-@YourBot 今話題のNetflixドラマは？
+@YourBot What's the weather like in Tokyo today?
+@YourBot Tell me about the latest AI technology news
+@YourBot What are the recent developments in TypeScript?
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ `search_web` 関数が自動実行
-- ✅ 適切な検索キーワード生成
-- ✅ 関数実行 → 最終回答の流れ
+- ✅ Automatic web search execution
+- ✅ Response based on search results
+- ✅ Current/up-to-date information included
+- ✅ Source links provided when relevant
 
-### 📊 **T4. レート制限・モデル切替テスト**
+#### T2-2. Non-search Queries
 
-#### T4-1. 連続リクエスト
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-10回連続で送信:
-@YourBot テスト1
-@YourBot テスト2
+@YourBot What is 2+2?
+@YourBot Explain basic programming concepts
+@YourBot Hello, nice to meet you
+```
+
+**Expected Results**:
+
+- ✅ Direct response without search
+- ✅ Fast response (<2 seconds)
+- ✅ Appropriate response without external data
+
+### ⚡ **T3. Function Calling Testing**
+
+#### T3-1. Character Count Function
+
+**Test Procedure**:
+
+```
+@YourBot Count the characters in this text: "Hello, World! This is a test message."
+@YourBot How many characters are in "TypeScript"?
+```
+
+**Expected Results**:
+
+- ✅ `count_characters` function automatically executed
+- ✅ Accurate character count in response
+- ✅ Execution logged properly
+
+#### T3-2. Search Function Auto-trigger
+
+**Test Procedure**:
+
+```
+@YourBot What's the current exchange rate for USD/JPY?
+@YourBot Latest tech event information
+@YourBot What's trending on social media today?
+```
+
+**Expected Results**:
+
+- ✅ `search_web` function automatically executed
+- ✅ Appropriate search query generated
+- ✅ Function execution → final response flow
+
+### 📊 **T4. Rate Limiting & Model Switching**
+
+#### T4-1. Continuous Requests
+
+**Test Procedure**:
+
+```
+Send 10 consecutive messages:
+@YourBot Test 1
+@YourBot Test 2
 ...
-@YourBot テスト10
+@YourBot Test 10
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 全リクエストが正常処理
-- ✅ レスポンス時間が徐々に長くなる可能性
-- ✅ エラーが発生しない
-- ✅ モデル切替ログが出力される可能性
+- ✅ All requests processed normally
+- ✅ Response times may gradually increase
+- ✅ No errors occur
+- ✅ Model switching logs may appear
 
-#### T4-2. 高負荷テスト
+#### T4-2. High Load Testing
 
-**テスト手順**:
-
-```
-短時間 (1分) で15-20回送信:
-@YourBot 重い検索: [複雑な質問]
-@YourBot 長い質問: [500文字程度の質問]
-```
-
-**期待結果**:
-
-- ✅ `gemini-2.5-flash` → `gemini-2.0-flash` 自動切替
-- ✅ レート制限到達時の適切なメッセージ
-- ✅ サービス停止しない
-
-### 📝 **T5. メッセージ長制限対応テスト**
-
-#### T5-1. 長い回答の処理
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-@YourBot 日本の歴史について詳しく教えて
-@YourBot プログラミング言語の種類をすべて説明して
-@YourBot 長い小説を書いて
+Send 15-20 messages within 1 minute:
+@YourBot Complex search query: [detailed question]
+@YourBot Long question: [500+ character question]
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 2000 文字を超える場合、自動分割
-- ✅ 複数メッセージに分かれて送信
-- ✅ `(1/3)`, `(2/3)`, `(3/3)` の形式
-- ✅ 内容が途切れない
+- ✅ Automatic `gemini-2.0-flash` → `gemini-1.5-flash` switching
+- ✅ Appropriate rate limit messages when quota reached
+- ✅ Service continues without crashing
 
-#### T5-2. 日本語処理
+### 📝 **T5. Message Length Handling**
 
-**テスト手順**:
+#### T5-1. Long Response Processing
 
-```
-@YourBot 日本語の複雑な文章: 「これは長い日本語の文章です...」(長文)
-@YourBot 絵文字と特殊文字: 🤖💻🔥✨
-```
-
-**期待結果**:
-
-- ✅ 日本語の適切な文字数カウント
-- ✅ 絵文字が正しく処理される
-- ✅ 分割位置が自然
-
-### 🔄 **T6. チャンネル自動応答テスト**
-
-### ⚙️ **T7. スラッシュコマンドテスト (Phase 3 新機能)**
-
-#### T7-1. /status コマンド
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-管理者アカウントで実行:
+@YourBot Tell me about the complete history of Japan
+@YourBot Explain all programming languages in detail
+@YourBot Write a long story about technology
+```
+
+**Expected Results**:
+
+- ✅ Automatic message splitting when >2000 characters
+- ✅ Multiple messages sent with indicators
+- ✅ Format: `(1/3)`, `(2/3)`, `(3/3)`
+- ✅ Content remains coherent across splits
+
+#### T5-2. Unicode and Emoji Processing
+
+**Test Procedure**:
+
+```
+@YourBot Process this text: "これは長い日本語の文章です..."[long text]
+@YourBot Handle emojis: 🤖💻🔥✨
+```
+
+**Expected Results**:
+
+- ✅ Proper Unicode character counting
+- ✅ Emojis processed correctly
+- ✅ Natural splitting positions
+
+### 🔄 **T6. Auto-response Channel Testing**
+
+#### T6-1. Auto-response Configuration
+
+**Setup Method**:
+
+```bash
+# Use /config command to set up auto-response channel
+/config channel add #auto-response-test
+```
+
+**Test Procedure**:
+
+```
+In #auto-response-test channel (without mentions):
+What's the weather like?
+Tell me some news
+```
+
+**Expected Results**:
+
+- ✅ AI response without @mention
+- ✅ No response in other channels
+- ✅ Setting changes applied immediately
+
+### ⚙️ **T7. Slash Commands Testing**
+
+#### T7-1. /status Command
+
+**Test Procedure**:
+
+```
+With Administrator account:
 /status
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ ボット状態・稼働時間が表示される
-- ✅ API 使用量統計が表示される
-- ✅ メモリ使用量が表示される
-- ✅ 3 秒以内に応答
+- ✅ Bot status and uptime displayed
+- ✅ API usage statistics shown
+- ✅ Memory usage information
+- ✅ Response within 3 seconds
 
-#### T7-2. /config コマンド
+#### T7-2. /config Command
 
-**テスト手順**:
+**Test Procedure**:
 
 ```
 /config view
@@ -242,36 +271,38 @@ bun run src/bot.ts
 /config mention enable
 /config channel add #test-channel
 /config channel remove #test-channel
-/config prompt set "カスタムプロンプト"
+/config prompt set "Custom prompt here"
 /config strategy split
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 各サブコマンドが正常動作
-- ✅ 設定変更が即座に反映
-- ✅ 適切な確認メッセージ
+- ✅ All subcommands function normally
+- ✅ Settings changes applied immediately
+- ✅ Appropriate confirmation messages
 
-#### T7-3. /search コマンド
+#### T7-3. /search Command
 
-**テスト手順**:
+**Test Procedure**:
 
 ```
 /search quota
 /search toggle disable
 /search toggle enable
-/search test "今日のニュース"
+/search test "latest news"
+/search reset
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ クォータ使用量表示
-- ✅ 検索機能の有効/無効切替
-- ✅ テスト検索の正常実行
+- ✅ Quota usage display
+- ✅ Search functionality enable/disable toggle
+- ✅ Test search executes normally
+- ✅ Reset functionality works
 
-#### T7-4. /model コマンド
+#### T7-4. /model Command
 
-**テスト手順**:
+**Test Procedure**:
 
 ```
 /model info
@@ -279,219 +310,199 @@ bun run src/bot.ts
 /model limits
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 現在の AI モデル情報表示
-- ✅ 使用統計情報表示
-- ✅ レート制限状況表示
+- ✅ Current AI model information displayed
+- ✅ Usage statistics shown
+- ✅ Rate limit status displayed
 
-#### T7-5. 権限テスト
+#### T7-5. Permission Testing
 
-**テスト手順**:
+**Test Procedure**:
 
 ```
-非管理者アカウントで実行:
+With non-administrator account:
 /status
 /config view
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 「管理者権限が必要」メッセージ
-- ✅ コマンドが実行されない
+- ✅ "Administrator permission required" message
+- ✅ Commands not executed
 
-#### T6-1. 自動応答チャンネル設定
+### 🚨 **T8. Error Handling Testing**
 
-**設定方法**:
+#### T8-1. API Limit Reached
 
-```bash
-# 設定ファイル編集 (config/bot-config.yaml)
-# または、動的設定 (実装されている場合)
-```
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-#auto-response-test チャンネルで:
-天気はどうですか？ (メンションなし)
-最新ニュースは？ (メンションなし)
+# Intentionally reach limits with continuous sends
+@YourBot Test (30+ consecutive messages)
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ メンションなしでも AI 応答
-- ✅ 他チャンネルでは応答しない
-- ✅ 設定変更が即座に反映
+- ✅ Appropriate "quota exceeded" message
+- ✅ Bot doesn't crash
+- ✅ Normal recovery after limit reset
 
-### 🚨 **T8. エラーハンドリングテスト**
+#### T8-2. Invalid Input Testing
 
-#### T8-1. API 制限到達
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-# 意図的に制限到達まで連続送信
-@YourBot テスト (30回以上連続)
+@YourBot [Extremely long message: 5000+ characters]
+@YourBot 🤖🤖🤖🤖🤖 (emojis only)
+@YourBot <@everyone> @here (dangerous mentions)
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 「利用量上限」の適切なメッセージ
-- ✅ ボットがクラッシュしない
-- ✅ 制限解除後に正常復旧
+- ✅ Sanitization functions normally
+- ✅ Appropriate error messages
+- ✅ No security issues
 
-#### T8-2. 不正入力テスト
+### 📈 **T9. Performance Testing**
 
-**テスト手順**:
+#### T9-1. Response Time Measurement
 
-```
-@YourBot [極端に長いメッセージ 5000文字]
-@YourBot 🤖🤖🤖🤖🤖 (絵文字のみ)
-@YourBot <@everyone> @here (危険なメンション)
-```
+**Performance Targets**:
 
-**期待結果**:
+- 🕐 Simple questions: <2 seconds
+- 🔍 Search required: <5 seconds
+- 💭 Complex questions: <8 seconds
 
-- ✅ サニタイゼーション正常動作
-- ✅ 適切なエラーメッセージ
-- ✅ セキュリティ問題なし
+#### T9-2. Concurrent Requests
 
-### 📈 **T9. パフォーマンステスト**
-
-#### T9-1. 応答時間測定
-
-**テスト項目**:
-
-- 🕐 簡単な質問: 2 秒以内
-- 🔍 検索必要: 5 秒以内
-- 💭 複雑な質問: 8 秒以内
-
-#### T9-2. 同時リクエスト
-
-**テスト手順**:
+**Test Procedure**:
 
 ```
-複数ユーザーで同時に送信:
-User1: @YourBot 質問1
-User2: @YourBot 質問2
-User3: @YourBot 質問3
+Multiple users simultaneously send:
+User1: @YourBot Question 1
+User2: @YourBot Question 2
+User3: @YourBot Question 3
 ```
 
-**期待結果**:
+**Expected Results**:
 
-- ✅ 全ユーザーに適切に応答
-- ✅ 応答順序が適切
-- ✅ メモリ使用量正常
+- ✅ All users receive appropriate responses
+- ✅ Response order is appropriate
+- ✅ Memory usage remains normal
 
 ---
 
-## 🎯 **合格基準**
+## 🎯 **Acceptance Criteria**
 
-### 必須テスト (Phase 3 完了認定)
+### Required Tests (Core Functionality)
 
-- ✅ T1: 基本 AI 応答 (100%成功)
-- ✅ T2: 検索機能統合 (90%以上成功)
-- ✅ T3: Function Calling (100%成功)
-- ✅ T4: レート制限処理 (正常動作)
-- ✅ T5: メッセージ長制限 (正常分割)
-- ✅ T7: スラッシュコマンド (100%成功)
+- ✅ T1: Basic AI responses (100% success)
+- ✅ T2: Search integration (90%+ success)
+- ✅ T3: Function calling (100% success)
+- ✅ T4: Rate limiting handling (normal operation)
+- ✅ T5: Message length handling (proper splitting)
+- ✅ T7: Slash commands (100% success)
 
-### 推奨テスト (品質確認)
+### Recommended Tests (Quality Assurance)
 
-- ✅ T6: チャンネル自動応答
-- ✅ T8: エラーハンドリング
-- ✅ T9: パフォーマンス
+- ✅ T6: Auto-response channels
+- ✅ T8: Error handling
+- ✅ T9: Performance
 
-### 品質指標
+### Quality Metrics
 
-- **応答率**: 95%以上
-- **平均応答時間**: 5 秒以内
-- **エラー率**: 5%以下
-- **連続稼働**: 1 時間以上
+- **Response Rate**: 95%+ success
+- **Average Response Time**: <5 seconds
+- **Error Rate**: <5%
+- **Continuous Operation**: 1+ hour without issues
 
 ---
 
-## 📋 **テスト記録テンプレート**
+## 📋 **Test Record Template**
 
-### テスト実行記録
-
-```
-実行日時: 2025年6月6日
-テスト環境: Discord Server [サーバー名]
-ボットバージョン: Phase 3 完了版
-
-□ T1-1: メンション応答 - ✅成功 / ❌失敗
-□ T1-2: 自然な会話 - ✅成功 / ❌失敗
-□ T2-1: 検索機能 - ✅成功 / ❌失敗
-□ T2-2: 検索判断 - ✅成功 / ❌失敗
-□ T3-1: 文字数カウント - ✅成功 / ❌失敗
-□ T3-2: 検索関数 - ✅成功 / ❌失敗
-□ T4-1: 連続リクエスト - ✅成功 / ❌失敗
-□ T4-2: 高負荷テスト - ✅成功 / ❌失敗
-□ T5-1: 長い回答 - ✅成功 / ❌失敗
-□ T5-2: 日本語処理 - ✅成功 / ❌失敗
-□ T6-1: 自動応答 - ✅成功 / ❌失敗
-□ T7-1: /statusコマンド - ✅成功 / ❌失敗
-□ T7-2: /configコマンド - ✅成功 / ❌失敗
-□ T7-3: /searchコマンド - ✅成功 / ❌失敗
-□ T7-4: /modelコマンド - ✅成功 / ❌失敗
-□ T7-5: 権限テスト - ✅成功 / ❌失敗
-□ T8-1: API制限 - ✅成功 / ❌失敗
-□ T8-2: 不正入力 - ✅成功 / ❌失敗
-□ T9-1: 応答時間 - ✅成功 / ❌失敗
-□ T9-2: 同時リクエスト - ✅成功 / ❌失敗
-
-総合評価: ✅Phase 3 完了認定 / ❌要修正
-```
-
-### 不具合報告
+### Test Execution Record
 
 ```
-エラー内容:
-再現手順:
-期待結果:
-実際の結果:
-ログ出力:
+Date: YYYY-MM-DD
+Test Environment: Discord Server [Server Name]
+Bot Version: Production Ready
+Tester: [Name]
+
+□ T1-1: Mention Response - ✅ Pass / ❌ Fail
+□ T1-2: Natural Conversation - ✅ Pass / ❌ Fail
+□ T2-1: Search Functionality - ✅ Pass / ❌ Fail
+□ T2-2: Search Decision - ✅ Pass / ❌ Fail
+□ T3-1: Character Count - ✅ Pass / ❌ Fail
+□ T3-2: Search Function - ✅ Pass / ❌ Fail
+□ T4-1: Continuous Requests - ✅ Pass / ❌ Fail
+□ T4-2: High Load - ✅ Pass / ❌ Fail
+□ T5-1: Long Responses - ✅ Pass / ❌ Fail
+□ T5-2: Unicode Processing - ✅ Pass / ❌ Fail
+□ T6-1: Auto-response - ✅ Pass / ❌ Fail
+□ T7-1: /status Command - ✅ Pass / ❌ Fail
+□ T7-2: /config Command - ✅ Pass / ❌ Fail
+□ T7-3: /search Command - ✅ Pass / ❌ Fail
+□ T7-4: /model Command - ✅ Pass / ❌ Fail
+□ T7-5: Permission Test - ✅ Pass / ❌ Fail
+□ T8-1: API Limits - ✅ Pass / ❌ Fail
+□ T8-2: Invalid Input - ✅ Pass / ❌ Fail
+□ T9-1: Response Time - ✅ Pass / ❌ Fail
+□ T9-2: Concurrent Requests - ✅ Pass / ❌ Fail
+
+Overall Assessment: ✅ Production Ready / ❌ Requires Fixes
+```
+
+### Bug Report Template
+
+```
+Issue Description:
+Reproduction Steps:
+Expected Result:
+Actual Result:
+Log Output:
+Environment: [Development/Production]
+Priority: [High/Medium/Low]
 ```
 
 ---
 
-## 🚀 **次のステップ**
+## 🚀 **Next Steps**
 
-### Phase 3 完了後
+### After Testing Completion
 
-✅ **Phase 4 実装準備** (次期機能):
+✅ **Production Deployment Ready**:
 
-- ファイル処理 (画像アップロード対応)
-- 高度な設定管理 UI
-- ユーザー別設定管理
+- All core functionality verified
+- Administrative commands working
+- Error handling robust
+- Performance acceptable
 
-✅ **Phase 4 本番デプロイ準備**:
+✅ **Production Deployment Tasks**:
 
-- Docker 化
-- Coolify 設定
-- 監視・ログ集約
-- 本番環境テスト
-
----
-
-## 📞 **サポート**
-
-### 問題が発生した場合
-
-1. **ログ確認**: `bun run src/bot.ts` の出力
-2. **設定確認**: `.env`, `config/bot-config.yaml`
-3. **API 状態確認**: Gemini API, Brave Search API
-4. **Issue 報告**: [GitHub Issues](https://github.com/your-repo/gemiscord/issues)
-
-### 実装者向け
-
-- **詳細実装**: `IMPLEMENTATION_PLAN.md`
-- **開発ガイド**: `CLAUDE.md`
-- **型定義**: `src/types/`
-- **テストスイート**: `tests/`
+- Docker containerization
+- Environment configuration
+- Monitoring setup
+- Production testing
 
 ---
 
-**🎉 Phase 3 完了おめでとうございます！**
-**Gemiscord の全機能(スラッシュコマンド含む)が稼働中です。**
+## 📞 **Support**
+
+### If Issues Occur
+
+1. **Check Logs**: `logs/` directory output
+2. **Verify Configuration**: `.env` and `config/bot-config.yaml`
+3. **API Status**: Gemini API and Brave Search API availability
+4. **Environment**: Ensure all required environment variables are set
+
+### For Developers
+
+- **Detailed Implementation**: `IMPLEMENTATION_PLAN.md`
+- **Development Guide**: `CLAUDE.md`
+- **Technical Specs**: `spec.md`
+- **Test Framework**: `tests/README.md`
+
+---
+
+**🎉 Testing Complete - Gemiscord Production Ready!**

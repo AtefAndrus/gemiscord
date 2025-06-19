@@ -25,11 +25,11 @@ An intelligent Discord bot powered by Google's Gemini AI with automatic web sear
 - **Channel Management**: Control which channels the bot responds in
 - **Custom Prompts**: Set server-specific AI behavior
 
-### ⚡ **Slash Commands (Phase 3 Complete)**
+### ⚡ **Slash Commands**
 
 - `/status` - View bot status, uptime, and API usage statistics
 - `/config` - Manage server-specific bot configuration (5 subcommands)
-- `/search` - Control web search functionality and monitor quota (3 subcommands)
+- `/search` - Control web search functionality and monitor quota (4 subcommands)
 - `/model` - AI model information, usage stats, and rate limits (3 subcommands)
 
 ## 🚀 **Setup & Deployment**
@@ -255,7 +255,7 @@ src/
 ├── bot.ts              # Main entry point
 ├── handlers/           # Discord event handlers
 ├── services/          # AI, search, rate limiting
-├── commands/          # Slash commands (Phase 3)
+├── commands/          # Slash commands
 ├── types/             # TypeScript definitions
 └── utils/             # Logging, errors, constants
 
@@ -366,6 +366,6 @@ docker-compose up -d
 
 - 📚 [Discord.js Documentation](https://discord.js.org/)
 - 🧠 [Google Gemini API](https://ai.google.dev/)
-- 🔍 [Brave Search API](https://api.search.brave.com/)
+- 🔍 [Brave Search API](https://api-dashboard.search.brave.com/app/documentation/web-search/get-started)
 - 🏗️ [Discord Developer Portal](https://discord.com/developers/applications)
 - 🟢 [Bun Runtime](https://bun.sh/)

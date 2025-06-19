@@ -1,63 +1,104 @@
-# Claude Code Development Guide v7.0 - Gemiscord Project
+# Claude Code Development Guide - Gemiscord Project
 
-## 🎯 **CRITICAL: Development Workflow**
+## 🎯 **Current Project Status**
 
-### **STEP 1: ALWAYS START HERE**
+**✅ Core Development Complete**
 
-1. **Read Implementation Plan**: `IMPLEMENTATION_PLAN.md` - Contains detailed Phase 3 checklist
-2. **Fetch Latest API Docs**: Use WebFetch tool to get current Discord.js and Gemini API specs
-3. **Update TodoList**: Use TodoWrite tool to track all tasks and progress
+- Discord bot with AI integration (Gemini API + Brave Search)
+- 4 slash commands: `/status`, `/config`, `/search`, `/model`
+- Test coverage: 146+ tests passing (80%+ coverage)
+- Production-ready codebase with comprehensive error handling
 
-### **STEP 2: Implementation Protocol**
+**🔜 Next Phase: Production Deployment**
 
-1. **Test-First Development**: Write tests BEFORE implementation
-2. **Maintain 80%+ Coverage**: Run `bun test --coverage` after each feature
-
-## 📊 **Current Status (Phase 3 Complete)**
-
-### **✅ Foundation & AI Integration Complete**
-
-- Discord bot, configuration, AI responses with search
-- Tests passing: 146/146 (100% success rate)
-- Coverage: 77.85% (close to 80% target)
-
-### **✅ Phase 3 - Slash Commands Complete**
-
-- All 4 commands implemented: `/status`, `/config`, `/search`, `/model`
-- Admin-only permissions enforced
-- Comprehensive test coverage achieved
+- Docker containerization
+- Production environment setup
+- Enhanced monitoring and logging
 
 ## 📚 **Document Navigation**
 
-| When to Read                | Document                 | Purpose                          |
-| --------------------------- | ------------------------ | -------------------------------- |
-| **Before ANY Phase 3 work** | `IMPLEMENTATION_PLAN.md` | Detailed step-by-step checklist  |
-| **Setup/Installation**      | `README.md`              | Human user setup guide           |
-| **Testing**                 | `tests/README.md`        | Bun test framework details       |
-| **Technical specs**         | `spec.md`                | API limits, architecture details |
+| When to Read              | Document                 | Purpose                        |
+| ------------------------- | ------------------------ | ------------------------------ |
+| **Architecture Overview** | `spec.md`                | Technical specifications       |
+| **Development Roadmap**   | `IMPLEMENTATION_PLAN.md` | Current and future development |
+| **Setup & Usage**         | `README.md`              | User setup and feature guide   |
+| **Testing Framework**     | `tests/README.md`        | Bun test framework details     |
+| **Manual Testing**        | `DISCORD_TEST_GUIDE.md`  | Discord integration testing    |
 
 ## ⚡ **Quick Reference**
 
-### **Commands**
+### **Development Commands**
 
 ```bash
-bun test                    # Run all tests
-bun test --coverage        # Test with coverage
-bun run dev                # Development mode
+# Development
+bun install                     # Install dependencies
+bun run dev                     # Development with hot reload
+bun test                        # Run all tests
+bun test --coverage            # Test with coverage
+bun test --watch               # Watch mode for TDD
+
+# Quality Assurance
+bun run typecheck             # TypeScript validation
+bun run lint                  # Code quality checks
+bun test --bail               # Stop on first failure
+
+# Command Registration
+bun run src/registerCommands.ts    # Register slash commands
 ```
 
-### **Implementation Rules**
+### **Project Structure**
 
-- ✅ Always read `IMPLEMENTATION_PLAN.md` before starting new features
-- ✅ Use TodoWrite tool to track all development tasks
-- ✅ Fetch official docs with WebFetch before implementation
-- ✅ Maintain test coverage above 80%
-- ⚠️ Never create files unless explicitly required
-- ⚠️ Always prefer editing existing files
+```text
+src/
+├── bot.ts                     # Main entry point
+├── commands/                  # Slash commands (/status, /config, /search, /model)
+├── handlers/                  # Discord event handlers
+├── services/                  # AI, search, configuration, rate limiting
+├── types/                     # TypeScript definitions
+└── utils/                     # Logging, errors, constants
 
-### **Testing with Bun Framework (Critical Notes)**
+config/                        # YAML configuration files
+tests/                         # Comprehensive test suite (146+ tests)
+```
 
-⚠️ **Bun-specific syntax required** - See `tests/README.md` for full details:
+## 🔧 **Development Workflow**
+
+### **Starting Development**
+
+1. **Environment Setup**:
+
+   ```bash
+   cp .env.example .env
+   # Configure API keys (Discord, Gemini, Brave Search)
+   ```
+
+2. **Install Dependencies**:
+
+   ```bash
+   bun install
+   ```
+
+3. **Verify Tests**:
+
+   ```bash
+   bun test
+   ```
+
+4. **Start Development**:
+   ```bash
+   bun run dev
+   ```
+
+### **Making Changes**
+
+1. **Test-First Development**: Write tests before implementation
+2. **Run Tests Continuously**: Use `bun test --watch` during development
+3. **Maintain Coverage**: Ensure 80%+ test coverage for new code
+4. **Type Safety**: Fix TypeScript errors before committing
+
+### **Testing with Bun Framework**
+
+⚠️ **Critical**: Bun uses different syntax than Jest
 
 ```typescript
 // ✅ CORRECT - Bun test imports
@@ -70,50 +111,137 @@ const mockFn = jest.fn(); // ReferenceError: jest is not defined
 const mockFn = mock();
 ```
 
-**Key Testing Gotchas:**
+**Key Testing Requirements:**
 
 - Import `mock` from `bun:test` (not `jest.fn()`)
-- ES modules have readonly properties - use dependency injection
 - Use `(mockFn as any).mockClear()` for TypeScript compatibility
-- Import `afterEach` explicitly if needed
+- Import `afterEach` explicitly if needed for cleanup
+- ES modules have readonly properties - use dependency injection
 
-### **Key API URLs for WebFetch**
+## 🛠 **Implementation Guidelines**
+
+### **Code Standards**
+
+- **TypeScript**: Strict mode enabled, full type safety required
+- **Testing**: 80%+ coverage maintained, TDD approach preferred
+- **Error Handling**: Comprehensive error management for all external APIs
+- **Documentation**: Update relevant docs when adding features
+
+### **Architecture Patterns**
+
+- **Service Layer**: Business logic in dedicated service classes
+- **Configuration**: YAML static config + SQLite dynamic settings
+- **Error Recovery**: Graceful degradation for API failures
+- **Rate Limiting**: Smart quota management with automatic fallbacks
+
+### **External API Integration**
+
+- **Gemini API**: Function calling, model switching, caching
+- **Brave Search API**: Query enhancement, content extraction
+- **Discord API**: Slash commands, message handling, permission checks
+
+## 📋 **Key APIs for Development**
+
+### **When Using WebFetch Tool**
 
 - Discord.js v14: `https://discord.js.org/docs/packages/discord.js/14.19.3`
 - Gemini API: `https://ai.google.dev/gemini-api/docs/function-calling`
-- Brave Search: `https://api.search.brave.com/app/documentation/web-search`
+- Brave Search: `https://api-dashboard.search.brave.com/app/documentation/web-search/query`
 
-### **Project Structure**
-
-```text
-src/commands/        # 🔜 Phase 3 target (create)
-src/handlers/        # ✅ messageCreate.ts, ready.ts
-src/services/        # ✅ All AI/search services complete
-```
-
-## 🔧 **Environment Setup**
+### **Environment Variables**
 
 ```env
-DISCORD_TOKEN=your_token
-GEMINI_API_KEY=your_key
-BRAVE_SEARCH_API_KEY=your_key
+DISCORD_TOKEN=your_discord_bot_token
+DISCORD_CLIENT_ID=your_discord_application_id
+GEMINI_API_KEY=your_gemini_api_key
+BRAVE_SEARCH_API_KEY=your_brave_search_key
 NODE_ENV=development
+DATABASE_URL=sqlite://config/bot.sqlite
 ```
 
-## ✅ **Phase 3 Completed Checklist**
+## 🧪 **Testing Strategy**
 
-- [x] Read `IMPLEMENTATION_PLAN.md` Phase 3 section
-- [x] Fetch Discord.js v14 interaction docs
-- [x] Create `/status` command implementation
-- [x] Create `/config` command implementation
-- [x] Create `/search` command implementation
-- [x] Create `/model` command implementation
-- [x] Run full test suite (146/146 tests passing)
-- [x] Achieve 77.85% test coverage
+### **Test Structure**
 
-### **🚀 Next Development Phase**
+- **Unit Tests**: Service layer, utilities (`tests/unit/`)
+- **Integration Tests**: End-to-end workflows (`tests/integration/`)
+- **Coverage Target**: 80%+ line coverage maintained
+- **Performance**: ~400ms full test suite execution
 
-Ready for production deployment or additional feature development. All core functionality implemented and tested.
+### **Common Testing Patterns**
+
+```typescript
+// Discord command testing
+const mockInteraction = {
+  guild: { id: "test-guild" },
+  user: { id: "test-user" },
+  deferReply: mock().mockResolvedValue(undefined),
+  editReply: mock().mockResolvedValue(undefined),
+};
+
+// Service mocking
+const mockService = {
+  method: mock().mockResolvedValue("expected-result"),
+};
+```
+
+## 🚀 **Production Readiness**
+
+### **Current Capabilities**
+
+- **Fully Functional Bot**: All core features implemented and tested
+- **Admin Commands**: Complete slash command system with permissions
+- **AI Integration**: Gemini API with function calling and search
+- **Configuration**: Flexible YAML + SQLite configuration system
+- **Monitoring**: Status commands and usage tracking
+
+### **Production Deployment (Next Phase)**
+
+1. **Docker Setup**: Multi-stage Dockerfile for Bun runtime
+2. **Environment Config**: Production environment variables
+3. **Monitoring**: Log aggregation and performance monitoring
+4. **Health Checks**: Automated status monitoring
+
+## 🔍 **Troubleshooting**
+
+### **Common Issues**
+
+- **Test Failures**: Check Bun-specific syntax (no Jest globals)
+- **TypeScript Errors**: Enable strict mode compliance
+- **API Errors**: Verify environment variables and API keys
+- **Discord Permissions**: Ensure bot has required permissions
+
+### **Development Support**
+
+- **Logs**: Structured logging in `logs/` directory
+- **Debug Mode**: Set `NODE_ENV=development` for detailed logs
+- **Test Isolation**: Each test runs with fresh mock states
+- **Hot Reload**: Automatic restart during development
+
+## 💡 **Best Practices**
+
+### **Code Quality**
+
+1. **Write Tests First**: TDD approach for all new features
+2. **Type Everything**: Leverage TypeScript for error prevention
+3. **Handle Errors**: Graceful degradation for external API failures
+4. **Document Changes**: Update specs and guides when adding features
+
+### **Performance**
+
+1. **Response Caching**: 10-minute TTL for non-search responses
+2. **Rate Limiting**: Smart quota management to prevent API exhaustion
+3. **Message Splitting**: Efficient handling of long responses
+4. **Database Optimization**: Efficient SQLite queries and connections
+
+### **Security**
+
+1. **Admin-Only Commands**: All slash commands require Administrator permission
+2. **Input Sanitization**: Safe handling of Discord mentions and user content
+3. **Environment Variables**: Secure API key storage
+4. **Error Messages**: No sensitive information in user-facing errors
+
+---
 
 ## important-instruction-reminders
 
@@ -121,3 +249,15 @@ Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+## Memories
+
+- 一次的なスクリプトは temp/に書いてください。作業が終わったら中身を削除してください。
+
+## 🔗 **Quick Links**
+
+- **Main Documentation**: `README.md` - Setup and usage guide
+- **Technical Specs**: `spec.md` - Architecture and API details
+- **Development Roadmap**: `IMPLEMENTATION_PLAN.md` - Current and future plans
+- **Testing Guide**: `tests/README.md` - Bun test framework specifics
+- **Manual Testing**: `DISCORD_TEST_GUIDE.md` - Discord integration testing

@@ -21,23 +21,6 @@ prompts:
     - 技術的な質問にも分かりやすく答える
     - デバッグ情報を含めることがある
 
-# Development-specific rate limits (more lenient)
-api:
-  gemini:
-    models:
-      available:
-        - "gemini-2.5-flash-preview-05-20"
-        - "gemini-2.0-flash"
-    rate_limits:
-      "gemini-2.5-flash-preview-05-20":
-        rpm: 5 # Lower for testing
-        tpm: 125000 # Half of production
-        rpd: 250 # Half of production
-      "gemini-2.0-flash":
-        rpm: 8 # Lower for testing
-        tpm: 500000 # Half of production
-        rpd: 750 # Half of production
-
 # Shorter cache TTLs for development
 constants:
   cache:
