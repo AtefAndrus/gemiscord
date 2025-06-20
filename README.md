@@ -30,7 +30,7 @@ An intelligent Discord bot powered by Google's Gemini AI with automatic web sear
 - `/status` - View bot status, uptime, and API usage statistics
 - `/config` - Manage server-specific bot configuration (5 subcommands)
 - `/search` - Control web search functionality and monitor quota (4 subcommands)
-- `/model` - AI model information, usage stats, and rate limits (3 subcommands)
+- `/model` - AI model information, usage stats, and rate limits (4 subcommands)
 
 ## 🚀 **Setup & Deployment**
 
@@ -115,6 +115,8 @@ Each Discord server can customize:
 - **Response Channels**: Which channels the bot auto-responds in
 - **Custom Prompts**: Server-specific AI personality/behavior
 - **Search Settings**: Enable/disable web search functionality
+- **Preferred AI Model**: Set guild-specific preferred AI model
+- **Command Visibility**: Configure whether commands are ephemeral or visible to all users
 
 ### **Logging Configuration**
 
@@ -166,7 +168,7 @@ Complete slash command system implemented with admin-only access:
 - `/search quota` - View search usage and limits
 - `/search test "query"` - Test search functionality
 - `/status` - View bot performance, uptime, and API usage statistics
-- `/model info/stats/limits` - AI model information and usage
+- `/model info/stats/limits/switch` - AI model information, usage, and switching
 
 ## 👩‍💻 **For Developers (Source Code Modification & Testing)**
 

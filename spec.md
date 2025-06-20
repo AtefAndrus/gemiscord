@@ -84,6 +84,7 @@ Gemiscord is a Discord bot that integrates Google's Gemini AI with automated web
 - **Model Information**: Current active models and capabilities
 - **Usage Statistics**: Token usage and request statistics
 - **Rate Limit Status**: Current limits and reset times
+- **Model Switching**: Set preferred model for the guild
 
 ## Configuration System
 
@@ -95,12 +96,38 @@ Gemiscord is a Discord bot that integrates Google's Gemini AI with automated web
 api:
   gemini:
     models:
-      primary: "gemini-2.0-flash"
-      fallback: "gemini-1.5-flash"
-      available: ["gemini-2.0-flash", "gemini-1.5-flash"]
+      # Priority order - models are tried in sequence (first = highest priority)
+      models:
+        - "gemini-2.5-flash"
+        - "gemini-2.0-flash"
+        - "gemini-2.5-flash-lite-preview-06-17"
+    rate_limits:
+      "gemini-2.5-flash":
+        rpm: 10
+        tpm: 250000
+        rpd: 500
+      "gemini-2.0-flash":
+        rpm: 15
+        tpm: 1000000
+        rpd: 1500
+      "gemini-2.5-flash-lite-preview-06-17":
+        rpm: 15
+        tpm: 250000
+        rpd: 500
   brave_search:
     free_quota: 2000
     regions: ["JP", "US", "global"]
+
+# UI/UX configuration
+ui:
+  commands:
+    ephemeral:
+      default: false # All commands ephemeral by default
+      admin_only: false # Admin commands always ephemeral
+      config_commands: false # /config command visible to channel
+      status_commands: false # /status command visible to channel
+      search_commands: false # /search command ephemeral
+      model_commands: false # /model command ephemeral
 
 prompts:
   system: "You are a helpful Discord AI assistant..."
@@ -131,6 +158,7 @@ interface GuildConfig {
   search_enabled: boolean; // Web search functionality
   server_prompt?: string; // Custom server prompt
   message_limit_strategy: "compress" | "split";
+  preferred_model?: string; // Guild-specific preferred AI model
 }
 
 interface ChannelConfig {
