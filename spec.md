@@ -28,8 +28,8 @@ Gemiscord is a Discord bot that integrates Google's Gemini AI with automated web
 | Runtime        | Bun                 | 1.2.15+  | JavaScript runtime and package manager |
 | Language       | TypeScript          | 5.8.3    | Type-safe development                  |
 | Discord API    | discord.js          | 14.20.0  | Discord bot integration                |
-| AI Integration | @google/genai       | 1.5.1    | Gemini API client                      |
-| Configuration  | keyv + @keyv/sqlite | 5.3.4    | Dynamic configuration storage          |
+| AI Integration | @google/genai       | 1.6.0    | Gemini API client                      |
+| Configuration  | keyv + @keyv/sqlite | 5.3.4/4.0.5 | Dynamic configuration storage          |
 | Search API     | Brave Search API    | v1       | Web search capabilities                |
 | Testing        | Bun Test            | built-in | Native test runner                     |
 

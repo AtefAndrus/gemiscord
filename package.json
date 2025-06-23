@@ -19,15 +19,15 @@
     "test:verbose": "bun test --verbose"
   },
   "dependencies": {
-    "@google/genai": "^1.5.1",
-    "@keyv/sqlite": "^4.0.4",
+    "@google/genai": "^1.6.0",
+    "@keyv/sqlite": "^4.0.5",
     "discord.js": "14.20.0",
     "keyv": "^5.3.4",
     "yaml": "^2.8.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.16",
-    "@types/node": "^22.15.32",
+    "@types/bun": "^1.2.17",
+    "@types/node": "24.0.3",
     "typescript": "^5.8.3"
   },
   "engines": {
