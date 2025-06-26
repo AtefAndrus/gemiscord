@@ -10,26 +10,6 @@ import {
   ToolConfig,
 } from "@google/genai";
 
-// Import official types when needed (currently available but unused)
-// import { FunctionDeclaration, Schema, FunctionCallingConfigMode } from "@google/genai";
-
-// TODO: Replace custom FunctionDeclaration with official type when implementing function calling
-export interface FunctionDeclaration {
-  name: string;
-  description: string;
-  parameters: {
-    type: string;
-    properties: Record<
-      string,
-      {
-        type: string;
-        description: string;
-        enum?: string[];
-      }
-    >;
-    required?: string[];
-  };
-}
 
 // Extended Gemini types
 export interface GeminiConfig {
@@ -45,48 +25,6 @@ export interface FunctionCallingConfig {
   toolConfig?: ToolConfig;
 }
 
-// Search function types
-export interface SearchFunctionCall {
-  name: "search_web";
-  args: {
-    query: string;
-    region?: "JP" | "US" | "global";
-  };
-}
-
-// Character count function types
-export interface CharacterCountFunctionCall {
-  name: "count_characters";
-  args: {
-    message: string;
-  };
-}
-
-export type SupportedFunctionCall =
-  | SearchFunctionCall
-  | CharacterCountFunctionCall;
-
-// Function response types
-export interface SearchFunctionResponse {
-  results: SearchResult[];
-  query: string;
-  region: string;
-  timestamp: string;
-}
-
-export interface SearchResult {
-  title: string;
-  url: string;
-  description: string;
-  publishedDate?: string;
-}
-
-export interface CharacterCountResponse {
-  character_count: number;
-  is_within_discord_limit: boolean;
-  requires_compression: boolean;
-  estimated_messages_if_split: number;
-}
 
 // Gemini service types
 export interface GeminiGenerateOptions {

@@ -412,9 +412,6 @@ export class BraveSearchService implements ISearchService {
         hasNews: !!data.news,
         hasFaq: !!data.faq,
         hasInfobox: !!data.infobox,
-        hasDiscussions: !!data.discussions,
-        hasLocations: !!data.locations,
-        hasVideos: !!data.videos,
       },
     };
 

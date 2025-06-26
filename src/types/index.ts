@@ -30,8 +30,6 @@ export {
 
 // Gemini types
 export type {
-  CharacterCountFunctionCall,
-  CharacterCountResponse,
   FunctionCallingConfig,
   GeminiAttachment,
   GeminiConfig,
@@ -41,10 +39,6 @@ export type {
   GeminiResponse,
   ModelInfo,
   ModelRateLimitStatus,
-  SearchFunctionCall,
-  SearchFunctionResponse,
-  SearchResult,
-  SupportedFunctionCall,
   TokenUsage,
 } from "./gemini.types.js";
 
@@ -56,21 +50,14 @@ export {
 
 // Search types
 export type {
-  BraveDiscussionResult,
-  BraveDiscussions,
   BraveFAQResult,
   BraveFAQResults,
   BraveInfobox,
-  BraveLocationResult,
-  BraveLocationResults,
-  BraveMixedResponse,
   BraveNewsResult,
   BraveNewsResults,
   BraveQuery,
   BraveSearchRequest,
   BraveSearchResponse,
-  BraveVideoResult,
-  BraveVideoResults,
   BraveWebResult,
   BraveWebResults,
   FormattedSearchResult,
@@ -83,22 +70,16 @@ export type {
 
 // Response types
 export type {
-  CachedResponse,
   CompressionRequest,
   DeferredResponse,
   ErrorResponse,
   FormattedResponse,
-  ModerationResult,
   ResponseContext,
   ResponseMetrics,
   ResponseStrategy,
   ResponseTemplate,
   SplitOptions,
   SplitResult,
-  StreamingOptions,
-  ValidationError,
-  ValidationResult,
-  ValidationWarning,
 } from "./response.types.js";
 
 export { ErrorCode, RESPONSE_TEMPLATES } from "./response.types.js";

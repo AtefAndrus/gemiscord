@@ -21,14 +21,10 @@ export interface BraveSearchRequest {
 export interface BraveSearchResponse {
   type: "search";
   query: BraveQuery;
-  mixed?: BraveMixedResponse;
   web?: BraveWebResults;
   news?: BraveNewsResults;
-  videos?: BraveVideoResults;
-  locations?: BraveLocationResults;
   faq?: BraveFAQResults;
   infobox?: BraveInfobox;
-  discussions?: BraveDiscussions;
 }
 
 export interface BraveQuery {
@@ -45,12 +41,6 @@ export interface BraveQuery {
   altered?: string;
 }
 
-export interface BraveMixedResponse {
-  type: string;
-  main: Array<BraveWebResult>;
-  top: Array<BraveWebResult>;
-  side: Array<BraveWebResult>;
-}
 
 export interface BraveWebResults {
   type: "search";
@@ -109,54 +99,7 @@ export interface BraveNewsResult {
   breaking?: boolean;
 }
 
-export interface BraveVideoResults {
-  type: "videos";
-  results: Array<BraveVideoResult>;
-}
 
-export interface BraveVideoResult {
-  type: "video_result";
-  url: string;
-  title: string;
-  description: string;
-  age: string;
-  page_age?: string;
-  thumbnail: {
-    src: string;
-  };
-  duration?: string;
-  creator?: string;
-}
-
-export interface BraveLocationResults {
-  type: "locations";
-  results: Array<BraveLocationResult>;
-}
-
-export interface BraveLocationResult {
-  type: "location_result";
-  id: string;
-  provider_url: string;
-  coordinates: [number, number];
-  zoom_level: number;
-  thumbnail: {
-    src: string;
-  };
-  postal_address?: {
-    type: "PostalAddress";
-    country?: string;
-    postal_code?: string;
-    street_address?: string;
-    address_region?: string;
-    address_locality?: string;
-    display_address?: string;
-  };
-  opening_hours?: {
-    days?: string[];
-    hours?: string;
-    is_open?: boolean;
-  };
-}
 
 export interface BraveFAQResults {
   type: "faq";
@@ -206,22 +149,6 @@ export interface BraveInfobox {
   };
 }
 
-export interface BraveDiscussions {
-  type: "discussions";
-  results: Array<BraveDiscussionResult>;
-}
-
-export interface BraveDiscussionResult {
-  type: "discussion_result";
-  url: string;
-  title: string;
-  description: string;
-  age: string;
-  data?: {
-    comment_count?: number;
-    score?: number;
-  };
-}
 
 // Search service types
 export interface SearchServiceOptions {

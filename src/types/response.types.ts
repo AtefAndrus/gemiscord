@@ -98,56 +98,9 @@ export interface DeferredResponse {
   timeout: NodeJS.Timeout;
 }
 
-// Response cache
-export interface CachedResponse {
-  query: string;
-  response: string;
-  timestamp: Date;
-  modelUsed: string;
-  ttl: number;
-}
 
-// Response validation
-export interface ValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
-  warnings: ValidationWarning[];
-}
 
-export interface ValidationError {
-  field: string;
-  message: string;
-  code: string;
-}
 
-export interface ValidationWarning {
-  field: string;
-  message: string;
-  suggestion?: string;
-}
-
-// Response moderation
-export interface ModerationResult {
-  flagged: boolean;
-  categories: {
-    violence: boolean;
-    hate: boolean;
-    harassment: boolean;
-    selfHarm: boolean;
-    sexual: boolean;
-    dangerous: boolean;
-  };
-  action: "allow" | "block" | "modify";
-  modifiedContent?: string;
-}
-
-// Streaming response support (future)
-export interface StreamingOptions {
-  enabled: boolean;
-  chunkSize: number;
-  updateInterval: number;
-  placeholder: string;
-}
 
 // Response templates
 export interface ResponseTemplate {
