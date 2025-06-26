@@ -144,6 +144,8 @@ const mockFn = mock();
 
 ### **When Using WebFetch Tool**
 
+📚 **For comprehensive API documentation links, see**: `DOCUMENTATION_LINKS.md`
+
 - Discord.js v14: `https://discord.js.org/docs/packages/discord.js/14.19.3`
 - Gemini API: `https://ai.google.dev/gemini-api/docs/function-calling`
 - Brave Search: `https://api-dashboard.search.brave.com/app/documentation/web-search/query`
@@ -261,3 +263,4 @@ NEVER proactively create documentation files (\*.md) or README files. Only creat
 - **Development Roadmap**: `IMPLEMENTATION_PLAN.md` - Current and future plans
 - **Testing Guide**: `tests/README.md` - Bun test framework specifics
 - **Manual Testing**: `DISCORD_TEST_GUIDE.md` - Discord integration testing
+- **📚 External Documentation**: `DOCUMENTATION_LINKS.md` - All official API docs and external links
