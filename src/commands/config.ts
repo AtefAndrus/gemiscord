@@ -24,7 +24,7 @@ import {
   sendPermissionDenied,
 } from "../handlers/interactionCreate.js";
 import { BaseCommandHandler } from "../handlers/BaseCommandHandler.js";
-import { MessageLimitStrategy } from "../types/config.types.js";
+import { ConfigActionHandler } from "../utils/commandUtils.js";
 import { ValidationError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -252,38 +252,19 @@ async function handleStrategySubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  const strategyType = getStringOption(
+  // Use utility function for option selection with descriptions
+  await ConfigActionHandler.handleOptionSelect({
     interaction,
-    "type",
-    true
-  ) as MessageLimitStrategy;
-
-  if (!strategyType || !["compress", "split"].includes(strategyType)) {
-    throw new ValidationError('Strategy must be either "compress" or "split"');
-  }
-
-  const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({
-    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+    guildId,
+    configKey: "message_limit_strategy",
+    optionParam: "type",
+    allowedValues: ["compress", "split"],
+    featureName: "Message handling strategy",
+    valueDescriptions: {
+      compress: "Long responses will be summarized to fit in one message",
+      split: "Long responses will be split across multiple messages",
+    },
   });
-
-  const currentConfig = await configService.getGuildConfig(guildId);
-
-  await configService.setGuildConfig(guildId, {
-    ...currentConfig,
-    message_limit_strategy: strategyType,
-  });
-
-  const strategyDescription =
-    strategyType === "compress"
-      ? "Long responses will be summarized to fit in one message"
-      : "Long responses will be split across multiple messages";
-
-  await interaction.editReply({
-    content: `✅ Message handling strategy set to **${strategyType}**.\n\n${strategyDescription}`,
-  });
-
-  logger.info("Message strategy updated", { guildId, strategy: strategyType });
 }
 
 /**

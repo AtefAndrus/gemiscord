@@ -19,6 +19,10 @@ import {
   hasAdminPermission,
   sendPermissionDenied,
 } from "../handlers/interactionCreate.js";
+import {
+  ConfigActionHandler,
+  CommandValidators,
+} from "../utils/commandUtils.js";
 import { ValidationError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -109,48 +113,29 @@ async function handleToggleSubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  const action = getStringOption(interaction, "action", true);
-
-  if (!action || !["enable", "disable"].includes(action)) {
-    throw new ValidationError('Action must be either "enable" or "disable"');
-  }
-
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-  const enabled = action === "enable";
-
-  // Check if Brave Search API key is available
-  if (enabled && !process.env.BRAVE_SEARCH_API_KEY) {
-    await interaction.editReply({
-      content:
-        "❌ Cannot enable search: Brave Search API key is not configured.",
-    });
-    return;
-  }
-
-  const currentConfig = await configService.getGuildConfig(guildId);
-
-  await configService.setGuildConfig(guildId, {
-    ...currentConfig,
-    search_enabled: enabled,
+  // Use utility function with custom validation and message builder
+  await ConfigActionHandler.handleToggleAction({
+    interaction,
+    guildId,
+    configKey: "search_enabled",
+    featureName: "Web search",
+    commandName: "search", // Force ephemeral for search command
+    customValidation: CommandValidators.createApiKeyValidator(
+      "BRAVE_SEARCH_API_KEY",
+      "search"
+    ),
+    customMessageBuilder: CommandValidators.createUsageMessageBuilder(
+      "Web search",
+      async () => {
+        const config = configManager.getConfig();
+        const usage = await configService.getSearchUsage();
+        return {
+          current: usage,
+          limit: config.api.brave_search.free_quota,
+        };
+      }
+    ),
   });
-
-  const statusText = enabled ? "enabled" : "disabled";
-  const emoji = enabled ? "✅" : "❌";
-
-  let statusMessage = `${emoji} Web search has been **${statusText}** for this server.`;
-
-  if (enabled) {
-    const config = configManager.getConfig();
-    const usage = await configService.getSearchUsage();
-    const freeQuota = config.api.brave_search.free_quota;
-    const remaining = Math.max(0, freeQuota - usage);
-    statusMessage += `\n\n📊 **Current Usage:** ${usage}/${freeQuota} queries this month (${remaining} remaining)`;
-  }
-
-  await interaction.editReply({ content: statusMessage });
-
-  logger.info(`Search ${statusText}`, { guildId, enabled });
 }
 
 /**

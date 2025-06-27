@@ -27,15 +27,15 @@ This document outlines a comprehensive refactoring plan for the Gemiscord projec
 **Phase**: Phase 1 - Command Handler Abstraction
 **Started**: June 27, 2025
 **Assigned**: Claude Code Assistant
-**Last Activity**: June 27, 2025 - Task 1.1 completed, BaseCommandHandler created
+**Last Activity**: June 27, 2025 - Task 1.2 completed, command utilities extracted
 
-**Next Action Required**: Execute Task 1.2 - Extract command utilities to commandUtils.ts
+**Next Action Required**: Execute Task 1.3 - Refactor remaining config.ts command handlers
 
 ### **Progress Overview**
 
 | Phase                          | Status         | Start Date | End Date | Completion % | Notes           |
 | ------------------------------ | -------------- | ---------- | -------- | ------------ | --------------- |
-| Phase 1: Command Abstraction   | 🟡 IN PROGRESS | 2025-06-27 | -        | 20%          | Task 1.1 ✅ Complete |
+| Phase 1: Command Abstraction   | 🟡 IN PROGRESS | 2025-06-27 | -        | 40%          | Tasks 1.1, 1.2 ✅ Complete |
 | Phase 2: Service Decomposition | ⏳ PENDING     | -          | -        | 0%           | Waiting Phase 1 |
 | Phase 3: Config Unification    | ⏳ PENDING     | -          | -        | 0%           | Waiting Phase 2 |
 | Phase 4: Type System           | ⏳ PENDING     | -          | -        | 0%           | Waiting Phase 3 |
@@ -54,12 +54,14 @@ This document outlines a comprehensive refactoring plan for the Gemiscord projec
   - Assigned: Claude Code Assistant
   - Notes: ✅ BaseCommandHandler created with common patterns. ✅ Refactored handleMentionSubcommand using new base class. ✅ Eliminated 32 lines of duplicate code. ✅ TypeScript compilation clean.
 
-- [ ] 🚧 **Task 1.2**: Extract command utilities
+- [x] ✅ **Task 1.2**: Extract command utilities
 
-  - Status: NOT STARTED
+  - Status: COMPLETED
   - File: `src/utils/commandUtils.ts`
-  - Start Date: -
-  - Notes: -
+  - Start Date: 2025-06-27
+  - End Date: 2025-06-27
+  - Assigned: Claude Code Assistant
+  - Notes: ✅ Created commandUtils.ts (284 lines) with ConfigActionHandler and CommandValidators. ✅ Refactored handleToggleSubcommand (search.ts) and handleStrategySubcommand (config.ts). ✅ Reduced config.ts from 453→424 lines. ✅ Maintained 0 code duplicates. ✅ All tests passing.
 
 - [ ] 🚧 **Task 1.3**: Refactor config.ts command handlers
 
