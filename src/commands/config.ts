@@ -23,9 +23,35 @@ import {
   hasAdminPermission,
   sendPermissionDenied,
 } from "../handlers/interactionCreate.js";
+import { BaseCommandHandler } from "../handlers/BaseCommandHandler.js";
 import { MessageLimitStrategy } from "../types/config.types.js";
 import { ValidationError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
+
+/**
+ * Config command handler extending BaseCommandHandler
+ */
+class ConfigCommandHandler extends BaseCommandHandler {
+  protected commandName = "config";
+
+  /**
+   * Handle mention subcommand using base class toggle functionality
+   */
+  async handleMentionSubcommand(
+    interaction: ChatInputCommandInteraction,
+    guildId: string
+  ): Promise<void> {
+    await this.handleToggleAction(interaction, guildId, {
+      guildId,
+      configKey: "mention_enabled",
+      value: getStringOption(interaction, "action", true) === "enable",
+      featureName: "Mention responses",
+    });
+  }
+}
+
+// Create instance for use in command handlers
+const configHandler = new ConfigCommandHandler();
 
 /**
  * Handle /config command with subcommands
@@ -62,7 +88,7 @@ export async function handleConfigCommand(
     // Route to appropriate subcommand handler
     switch (subcommand) {
       case "mention":
-        await handleMentionSubcommand(interaction, guildId);
+        await configHandler.handleMentionSubcommand(interaction, guildId);
         break;
 
       case "channel":
@@ -107,42 +133,6 @@ export async function handleConfigCommand(
       logger.error("Failed to send error response:", replyError);
     }
   }
-}
-
-/**
- * Handle mention enable/disable subcommand
- */
-async function handleMentionSubcommand(
-  interaction: ChatInputCommandInteraction,
-  guildId: string
-): Promise<void> {
-  const action = getStringOption(interaction, "action", true);
-
-  if (!action || !["enable", "disable"].includes(action)) {
-    throw new ValidationError('Action must be either "enable" or "disable"');
-  }
-
-  const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({
-    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
-  });
-
-  const enabled = action === "enable";
-  const currentConfig = await configService.getGuildConfig(guildId);
-
-  await configService.setGuildConfig(guildId, {
-    ...currentConfig,
-    mention_enabled: enabled,
-  });
-
-  const statusText = enabled ? "enabled" : "disabled";
-  const emoji = enabled ? "✅" : "❌";
-
-  await interaction.editReply({
-    content: `${emoji} Mention responses have been **${statusText}** for this server.`,
-  });
-
-  logger.info(`Mention responses ${statusText}`, { guildId, enabled });
 }
 
 /**
