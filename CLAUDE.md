@@ -19,11 +19,12 @@
 
 | When to Read              | Document                 | Purpose                        |
 | ------------------------- | ------------------------ | ------------------------------ |
-| **Architecture Overview** | `spec.md`                | Technical specifications       |
-| **Development Roadmap**   | `IMPLEMENTATION_PLAN.md` | Current and future development |
+| **Architecture Overview** | `docs/spec.md`           | Technical specifications       |
+| **Development Roadmap**   | `docs/IMPLEMENTATION_PLAN.md` | Current and future development |
 | **Setup & Usage**         | `README.md`              | User setup and feature guide   |
 | **Testing Framework**     | `tests/README.md`        | Bun test framework details     |
-| **Manual Testing**        | `DISCORD_TEST_GUIDE.md`  | Discord integration testing    |
+| **Manual Testing**        | `docs/DISCORD_TEST_GUIDE.md`  | Discord integration testing    |
+| **Code Analysis**         | `docs/check-similarity.md`    | Duplicate code detection tool  |
 
 ## ⚡ **Quick Reference**
 
@@ -144,7 +145,7 @@ const mockFn = mock();
 
 ### **When Using WebFetch Tool**
 
-📚 **For comprehensive API documentation links, see**: `DOCUMENTATION_LINKS.md`
+📚 **For comprehensive API documentation links, see**: `docs/DOCUMENTATION_LINKS.md`
 
 - Discord.js v14: `https://discord.js.org/docs/packages/discord.js/14.19.3`
 - Gemini API: `https://ai.google.dev/gemini-api/docs/function-calling`
@@ -259,8 +260,9 @@ NEVER proactively create documentation files (\*.md) or README files. Only creat
 ## 🔗 **Quick Links**
 
 - **Main Documentation**: `README.md` - Setup and usage guide
-- **Technical Specs**: `spec.md` - Architecture and API details
-- **Development Roadmap**: `IMPLEMENTATION_PLAN.md` - Current and future plans
+- **Technical Specs**: `docs/spec.md` - Architecture and API details
+- **Development Roadmap**: `docs/IMPLEMENTATION_PLAN.md` - Current and future plans
 - **Testing Guide**: `tests/README.md` - Bun test framework specifics
-- **Manual Testing**: `DISCORD_TEST_GUIDE.md` - Discord integration testing
-- **📚 External Documentation**: `DOCUMENTATION_LINKS.md` - All official API docs and external links
+- **Manual Testing**: `docs/DISCORD_TEST_GUIDE.md` - Discord integration testing
+- **Code Analysis**: `docs/check-similarity.md` - Duplicate code detection tool
+- **📚 External Documentation**: `docs/DOCUMENTATION_LINKS.md` - All official API docs and external links

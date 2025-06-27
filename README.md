@@ -245,7 +245,7 @@ bun test --coverage
 # Run integration tests
 bun test tests/integration
 
-# Manual Discord testing (follow DISCORD_TEST_GUIDE.md)
+# Manual Discord testing (follow docs/DISCORD_TEST_GUIDE.md)
 bun run dev
 # Test in your Discord server
 ```
@@ -280,9 +280,9 @@ tests/                 # Test suites (80%+ coverage)
 
 ### **Development Resources**
 
-- `IMPLEMENTATION_PLAN.md` - Detailed implementation guide
+- `docs/IMPLEMENTATION_PLAN.md` - Detailed implementation guide
 - `tests/README.md` - Testing framework documentation
-- `DISCORD_TEST_GUIDE.md` - Manual testing procedures
+- `docs/DISCORD_TEST_GUIDE.md` - Manual testing procedures
 
 ### **Contributing & Development Guidelines**
 
@@ -303,9 +303,9 @@ tests/                 # Test suites (80%+ coverage)
 
 3. **Documentation**
 
-   - `IMPLEMENTATION_PLAN.md` - Implementation roadmap
+   - `docs/IMPLEMENTATION_PLAN.md` - Implementation roadmap
    - `tests/README.md` - Testing framework guide
-   - `DISCORD_TEST_GUIDE.md` - Manual testing procedures
+   - `docs/DISCORD_TEST_GUIDE.md` - Manual testing procedures
 
 4. **Pull Request Process**
    - Ensure all tests pass
