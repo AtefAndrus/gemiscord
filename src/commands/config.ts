@@ -17,14 +17,13 @@ import {
 } from "discord.js";
 import { configManager, configService } from "../bot.js";
 import {
-  getChannelOption,
   getStringOption,
   getSubcommand,
   hasAdminPermission,
   sendPermissionDenied,
 } from "../handlers/interactionCreate.js";
 import { BaseCommandHandler } from "../handlers/BaseCommandHandler.js";
-import { ConfigActionHandler } from "../utils/commandUtils.js";
+import { ConfigActionHandler, ExtendedConfigHandlers } from "../utils/commandUtils.js";
 import { ValidationError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -142,60 +141,13 @@ async function handleChannelSubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  const action = getStringOption(interaction, "action", true);
-  const targetChannel = getChannelOption(interaction, "target", true);
-
-  if (!action || !["add", "remove"].includes(action)) {
-    throw new ValidationError('Action must be either "add" or "remove"');
-  }
-
-  if (!targetChannel || targetChannel.type !== ChannelType.GuildText) {
-    throw new ValidationError("Please select a valid text channel");
-  }
-
-  const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({
-    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
-  });
-
-  const currentConfig = await configService.getGuildConfig(guildId);
-  const currentChannels = currentConfig.response_channels || [];
-  const channelId = targetChannel.id;
-
-  let updatedChannels: string[] = currentChannels;
-  let resultMessage: string;
-
-  if (action === "add") {
-    if (currentChannels.includes(channelId)) {
-      resultMessage = `⚠️ <#${channelId}> is already in the auto-response list.`;
-    } else {
-      updatedChannels = [...currentChannels, channelId];
-      await configService.setGuildConfig(guildId, {
-        ...currentConfig,
-        response_channels: updatedChannels,
-      });
-      resultMessage = `✅ Added <#${channelId}> to auto-response channels.`;
-    }
-  } else {
-    if (!currentChannels.includes(channelId)) {
-      resultMessage = `⚠️ <#${channelId}> is not in the auto-response list.`;
-    } else {
-      updatedChannels = currentChannels.filter((id) => id !== channelId);
-      await configService.setGuildConfig(guildId, {
-        ...currentConfig,
-        response_channels: updatedChannels,
-      });
-      resultMessage = `✅ Removed <#${channelId}> from auto-response channels.`;
-    }
-  }
-
-  await interaction.editReply({ content: resultMessage });
-
-  logger.info(`Channel ${action} operation completed`, {
+  // Use utility function for channel list management
+  await ExtendedConfigHandlers.handleChannelList({
+    interaction,
     guildId,
-    channelId,
-    action,
-    channelCount: updatedChannels?.length || currentChannels.length,
+    configKey: "response_channels",
+    featureName: "Auto-response channels",
+    allowedChannelTypes: [ChannelType.GuildText],
   });
 }
 
@@ -206,42 +158,15 @@ async function handlePromptSubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  const promptContent = getStringOption(interaction, "content", true);
-
-  if (!promptContent || promptContent.length < 10) {
-    throw new ValidationError(
-      "Server prompt must be at least 10 characters long"
-    );
-  }
-
-  if (promptContent.length > 1000) {
-    throw new ValidationError(
-      "Server prompt must be less than 1000 characters"
-    );
-  }
-
-  const ephemeral = configManager.getEphemeralSetting("config");
-  await interaction.deferReply({
-    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
-  });
-
-  const currentConfig = await configService.getGuildConfig(guildId);
-
-  await configService.setGuildConfig(guildId, {
-    ...currentConfig,
-    server_prompt: promptContent,
-  });
-
-  await interaction.editReply({
-    content: `✅ Server-specific prompt has been updated.\n\n**Preview:**\n\`\`\`\n${promptContent.substring(
-      0,
-      200
-    )}${promptContent.length > 200 ? "..." : ""}\n\`\`\``,
-  });
-
-  logger.info("Server prompt updated", {
+  // Use utility function for text configuration
+  await ExtendedConfigHandlers.handleTextConfig({
+    interaction,
     guildId,
-    promptLength: promptContent.length,
+    configKey: "server_prompt",
+    textParam: "content",
+    featureName: "Server-specific prompt",
+    minLength: 10,
+    maxLength: 1000,
   });
 }
 

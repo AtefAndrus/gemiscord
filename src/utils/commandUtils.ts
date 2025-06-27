@@ -8,12 +8,12 @@
  * - Response formatting
  */
 
-import { ChatInputCommandInteraction, MessageFlags } from "discord.js";
+import { ChatInputCommandInteraction, MessageFlags, ChannelType } from "discord.js";
 import { configManager, configService } from "../bot.js";
 import { GuildConfig } from "../types/config.types.js";
 import { ValidationError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
-import { getStringOption } from "../handlers/interactionCreate.js";
+import { getStringOption, getChannelOption } from "../handlers/interactionCreate.js";
 
 /**
  * Custom validation function type for toggle actions
@@ -244,6 +244,194 @@ export class CommandValidators {
       
       return message;
     };
+  }
+}
+
+/**
+ * Parameters for channel list management (add/remove)
+ */
+export interface ChannelListParams {
+  interaction: ChatInputCommandInteraction;
+  guildId: string;
+  configKey: keyof GuildConfig;
+  channelParam?: string; // parameter name, defaults to "target"
+  actionParam?: string; // parameter name, defaults to "action"
+  featureName: string;
+  commandName?: string;
+  allowedChannelTypes?: ChannelType[];
+}
+
+/**
+ * Parameters for text configuration
+ */
+export interface TextConfigParams {
+  interaction: ChatInputCommandInteraction;
+  guildId: string;
+  configKey: keyof GuildConfig;
+  textParam: string; // parameter name (e.g., "content")
+  featureName: string;
+  commandName?: string;
+  minLength?: number;
+  maxLength?: number;
+  customValidator?: (text: string) => { isValid: boolean; errorMessage?: string };
+  customMessageBuilder?: (text: string) => string;
+}
+
+/**
+ * Extended configuration action handlers
+ */
+export class ExtendedConfigHandlers {
+  /**
+   * Handle channel list management (add/remove operations)
+   */
+  static async handleChannelList(params: ChannelListParams): Promise<void> {
+    const {
+      interaction,
+      guildId,
+      configKey,
+      channelParam = "target",
+      actionParam = "action",
+      featureName,
+      commandName = interaction.commandName,
+      allowedChannelTypes = [ChannelType.GuildText],
+    } = params;
+
+    const action = getStringOption(interaction, actionParam, true);
+    const targetChannel = getChannelOption(interaction, channelParam, true);
+
+    // Validate action
+    if (!action || !["add", "remove"].includes(action)) {
+      throw new ValidationError('Action must be either "add" or "remove"');
+    }
+
+    // Validate channel
+    if (!targetChannel || !allowedChannelTypes.includes(targetChannel.type)) {
+      throw new ValidationError("Please select a valid channel");
+    }
+
+    // Defer reply
+    const ephemeral = configManager.getEphemeralSetting(commandName);
+    await interaction.deferReply({
+      flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+    });
+
+    const currentConfig = await configService.getGuildConfig(guildId);
+    const currentList = (currentConfig[configKey] as string[]) || [];
+    const targetId = targetChannel.id;
+
+    let updatedList: string[] = currentList;
+    let resultMessage: string;
+
+    if (action === "add") {
+      if (currentList.includes(targetId)) {
+        resultMessage = `⚠️ <#${targetId}> is already in the ${featureName.toLowerCase()} list.`;
+      } else {
+        updatedList = [...currentList, targetId];
+        await configService.setGuildConfig(guildId, {
+          ...currentConfig,
+          [configKey]: updatedList,
+        });
+        resultMessage = `✅ Added <#${targetId}> to ${featureName.toLowerCase()}.`;
+      }
+    } else {
+      if (!currentList.includes(targetId)) {
+        resultMessage = `⚠️ <#${targetId}> is not in the ${featureName.toLowerCase()} list.`;
+      } else {
+        updatedList = currentList.filter((id) => id !== targetId);
+        await configService.setGuildConfig(guildId, {
+          ...currentConfig,
+          [configKey]: updatedList,
+        });
+        resultMessage = `✅ Removed <#${targetId}> from ${featureName.toLowerCase()}.`;
+      }
+    }
+
+    await interaction.editReply({ content: resultMessage });
+
+    // Log action
+    logger.info(`${featureName} ${action} operation completed`, {
+      guildId,
+      channelId: targetId,
+      action,
+      listCount: updatedList.length,
+    });
+  }
+
+  /**
+   * Handle text configuration with validation
+   */
+  static async handleTextConfig(params: TextConfigParams): Promise<void> {
+    const {
+      interaction,
+      guildId,
+      configKey,
+      textParam,
+      featureName,
+      commandName = interaction.commandName,
+      minLength = 1,
+      maxLength = 2000,
+      customValidator,
+      customMessageBuilder,
+    } = params;
+
+    const textContent = getStringOption(interaction, textParam, true);
+
+    // Basic length validation
+    if (!textContent || textContent.length < minLength) {
+      throw new ValidationError(
+        `${featureName} must be at least ${minLength} characters long`
+      );
+    }
+
+    if (textContent.length > maxLength) {
+      throw new ValidationError(
+        `${featureName} must be less than ${maxLength} characters`
+      );
+    }
+
+    // Custom validation
+    if (customValidator) {
+      const validation = customValidator(textContent);
+      if (!validation.isValid) {
+        throw new ValidationError(validation.errorMessage || "Validation failed");
+      }
+    }
+
+    // Defer reply
+    const ephemeral = configManager.getEphemeralSetting(commandName);
+    await interaction.deferReply({
+      flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+    });
+
+    // Update configuration
+    const currentConfig = await configService.getGuildConfig(guildId);
+    await configService.setGuildConfig(guildId, {
+      ...currentConfig,
+      [configKey]: textContent,
+    });
+
+    // Format response
+    let message: string;
+    if (customMessageBuilder) {
+      message = customMessageBuilder(textContent);
+    } else {
+      message = `✅ ${featureName} has been updated.`;
+      // Add preview for longer texts
+      if (textContent.length > 100) {
+        const preview = textContent.substring(0, 200);
+        const truncated = textContent.length > 200 ? "..." : "";
+        message += `\n\n**Preview:**\n\`\`\`\n${preview}${truncated}\n\`\`\``;
+      }
+    }
+
+    await interaction.editReply({ content: message });
+
+    // Log action
+    logger.info(`${featureName} updated`, {
+      guildId,
+      textLength: textContent.length,
+      configKey,
+    });
   }
 }
 
