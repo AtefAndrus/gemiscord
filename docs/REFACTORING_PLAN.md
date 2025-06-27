@@ -36,7 +36,7 @@ This document outlines a comprehensive refactoring plan for the Gemiscord projec
 | Phase                          | Status         | Start Date | End Date | Completion % | Notes           |
 | ------------------------------ | -------------- | ---------- | -------- | ------------ | --------------- |
 | Phase 1: Command Abstraction   | ✅ COMPLETED   | 2025-06-27 | 2025-06-27 | 100%         | All tasks ✅ Complete |
-| Phase 2: Service Decomposition | ⏳ PENDING     | -          | -        | 0%           | Waiting Phase 1 |
+| Phase 2: Service Decomposition | 📋 READY       | -          | -        | 0%           | Detailed plan created, ready to start |
 | Phase 3: Config Unification    | ⏳ PENDING     | -          | -        | 0%           | Waiting Phase 2 |
 | Phase 4: Type System           | ⏳ PENDING     | -          | -        | 0%           | Waiting Phase 3 |
 | Phase 5: QA & Documentation    | ⏳ PENDING     | -          | -        | 0%           | Waiting Phase 4 |
@@ -231,45 +231,175 @@ Using `similarity-ts` tool, we identified significant code duplication:
 
 #### **Objective**: Break down large services into focused, single-responsibility components
 
-#### **Tasks**:
+**Current State**: 3 files need decomposition
+- `messageCreate.ts` (805 lines) - Complex message orchestration
+- `braveSearch.ts` (655 lines) - Mixed API + business logic  
+- `gemini.ts` (609 lines) - Mixed client + caching + function calling
 
-1. **Message Handler Refactoring**
+**Target**: All files <400 lines with clear separation of concerns
 
-   ```typescript
-   // Before: messageCreate.ts (805 lines)
-   // After: Split into:
-   - MessageRouter.ts (routing logic)
-   - ContextBuilder.ts (message context creation)
-   - ResponseHandler.ts (response formatting)
-   - MessageCreateHandler.ts (coordination, <200 lines)
-   ```
+#### **Phase 2 Task Breakdown**:
 
-2. **Gemini Service Decomposition**
+##### **Task 2.1: MessageCreateHandler Decomposition (Priority: High)**
+**Current Analysis**: 805 lines with multiple responsibilities
+- Message routing logic (`shouldRespond`, routing decisions)
+- Context building (`MessageContext` creation)
+- Response generation orchestration
+- Service coordination (`geminiService`, `braveSearchService`, etc.)
 
-   ```typescript
-   // Before: gemini.ts (609 lines)
-   // After: Split into:
-   - GeminiClient.ts (API communication)
-   - ModelManager.ts (model switching, caching)
-   - FunctionHandler.ts (function calling logic)
-   - GeminiService.ts (main facade, <200 lines)
-   ```
+**Decomposition Strategy**:
+```typescript
+// Split messageCreate.ts (805 lines) into:
 
-3. **Search Service Refactoring**
-   ```typescript
-   // Before: braveSearch.ts (655 lines)
-   // After: Split into:
-   - SearchClient.ts (API communication)
-   - QueryProcessor.ts (query enhancement)
-   - ResultFormatter.ts (response formatting)
-   - BraveSearchService.ts (main facade, <200 lines)
-   ```
+1. MessageRouter.ts (~150 lines)
+   - shouldRespond() logic
+   - Message type detection
+   - Response channel validation
+   - Guild configuration checks
 
-#### **Expected Outcome**:
+2. MessageContextBuilder.ts (~100 lines)  
+   - MessageContext creation
+   - Attachment processing
+   - User mention handling
+   - Guild/channel data aggregation
 
-- No file larger than 400 lines
-- Clear separation of concerns
-- Improved testability and maintainability
+3. ResponseOrchestrator.ts (~200 lines)
+   - AI response generation coordination
+   - Function calling orchestration
+   - Error handling and fallbacks
+   - Response formatting coordination
+
+4. MessageCreateHandler.ts (~150 lines)
+   - Service initialization
+   - High-level flow coordination
+   - Interface implementation
+   - Clean facade pattern
+
+5. MessageProcessingPipeline.ts (~100 lines)
+   - Step-by-step processing pipeline
+   - Middleware support for future extensibility
+   - Processing state management
+```
+
+##### **Task 2.2: BraveSearchService Decomposition (Priority: High)**
+**Current Analysis**: 655 lines mixing API, rate limiting, usage tracking
+
+**Decomposition Strategy**:
+```typescript
+// Split braveSearch.ts (655 lines) into:
+
+1. BraveSearchClient.ts (~150 lines)
+   - Raw API communication
+   - HTTP request handling
+   - Error mapping and retry logic
+
+2. SearchRateLimiter.ts (~100 lines)
+   - Rate limit enforcement (1 req/sec)
+   - Request queuing if needed
+   - Rate limit status tracking
+
+3. SearchUsageTracker.ts (~100 lines)
+   - Monthly usage statistics
+   - Quota management and validation
+   - Usage reporting and alerts
+
+4. QueryProcessor.ts (~100 lines)
+   - Query sanitization and enhancement
+   - Search parameter optimization
+   - Query caching logic
+
+5. SearchResultFormatter.ts (~100 lines)
+   - Raw result processing
+   - Discord-friendly formatting
+   - Result ranking and filtering
+
+6. BraveSearchService.ts (~100 lines)
+   - Main service facade
+   - Component coordination
+   - High-level search operations
+```
+
+##### **Task 2.3: GeminiService Decomposition (Priority: Medium)**
+**Current Analysis**: 609 lines mixing client, caching, function calling
+
+**Decomposition Strategy**:
+```typescript
+// Split gemini.ts (609 lines) into:
+
+1. GeminiClient.ts (~150 lines)
+   - GoogleGenAI client wrapper
+   - Raw API communication
+   - Authentication and connection
+
+2. GeminiModelManager.ts (~100 lines)
+   - Model selection and switching
+   - Model configuration management
+   - Generation parameter optimization
+
+3. GeminiFunctionCaller.ts (~150 lines)
+   - Function calling orchestration
+   - Tool configuration and management
+   - Function result processing
+
+4. GeminiCacheManager.ts (~80 lines)
+   - Response caching strategy
+   - Cache invalidation logic
+   - Cache hit/miss statistics
+
+5. GeminiFileManager.ts (~80 lines)
+   - File upload coordination
+   - File lifecycle management
+   - File type validation
+
+6. GeminiService.ts (~150 lines)
+   - Main service facade
+   - Component coordination
+   - High-level AI operations
+```
+
+##### **Task 2.4: Service Integration and Dependency Injection (Priority: Medium)**
+**Objective**: Clean up service dependencies and improve testability
+
+**Strategy**:
+```typescript
+// Create service factory and dependency injection
+
+1. ServiceFactory.ts (~100 lines)
+   - Centralized service instantiation
+   - Dependency injection container
+   - Service lifecycle management
+
+2. ServiceInterfaces.ts (~50 lines)
+   - Clean interfaces for all services
+   - Dependency contracts
+   - Mock-friendly abstractions
+
+3. ServiceRegistry.ts (~80 lines)
+   - Service registration and discovery
+   - Service health monitoring
+   - Service restart and recovery
+```
+
+##### **Task 2.5: Updated Architecture Testing (Priority: Medium)**
+**Objective**: Update tests for new architecture
+- Update existing integration tests
+- Add unit tests for new smaller components
+- Create service mocking infrastructure
+- Validate no regression in functionality
+
+#### **Implementation Order**:
+1. **Week 2.1**: Task 2.1 - MessageCreateHandler decomposition
+2. **Week 2.2**: Task 2.2 - BraveSearchService decomposition  
+3. **Week 2.3**: Task 2.3 - GeminiService decomposition
+4. **Week 2.4**: Task 2.4 - Service integration improvements
+5. **Week 2.5**: Task 2.5 - Testing and validation
+
+#### **Success Metrics**:
+- **File Size**: All files <400 lines (target: <300 lines average)
+- **Separation of Concerns**: Each class has single responsibility
+- **Testability**: Each component easily mockable and testable
+- **Performance**: No regression in response times
+- **Functionality**: All existing features preserved
 
 ### Phase 3: Configuration System Unification (Week 3)
 
@@ -594,17 +724,17 @@ find src/ -name "*.ts" -exec sh -c 'echo "$(wc -l < "$1") $1"' _ {} \; | sort -n
 
 ### **📍 Current State Summary**
 
-**What's Done**: ✅ Planning and documentation complete
-**What's Next**: 🚧 Phase 1 - Create BaseCommandHandler class
+**What's Done**: ✅ Phase 1 COMPLETED! Command abstraction and utilities created
+**What's Next**: 🚧 Phase 2 - Service Layer Decomposition (messageCreate.ts, gemini.ts, braveSearch.ts)
 **Who's Working**: 👤 Unassigned
-**Status**: 🔄 Ready to begin implementation
+**Status**: 🔄 Ready to begin Phase 2 implementation
 
 ### **🎯 Immediate Next Steps**
 
-1. **Start Here**: Task 1.1 - Create BaseCommandHandler class
-2. **File to Create**: `src/handlers/BaseCommandHandler.ts`
-3. **Reference**: See Phase 1 implementation details (lines 172-219)
-4. **Success Criteria**: Reduce code duplication from 85% to <10%
+1. **Start Here**: Task 2.1 - MessageCreateHandler decomposition (805 lines → multiple focused files)
+2. **Target Files**: `messageCreate.ts` (805 lines), `braveSearch.ts` (655 lines), `gemini.ts` (609 lines)
+3. **Reference**: See Phase 2 implementation details (lines 241-402)
+4. **Success Criteria**: All files <400 lines with clear separation of concerns
 
 ---
 
