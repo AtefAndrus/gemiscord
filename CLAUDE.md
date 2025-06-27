@@ -17,12 +17,12 @@
 
 ## 📚 **Document Navigation**
 
-| When to Read              | Document                 | Purpose                        |
-| ------------------------- | ------------------------ | ------------------------------ |
-| **Architecture Overview** | `docs/spec.md`           | Technical specifications       |
+| When to Read              | Document                      | Purpose                        |
+| ------------------------- | ----------------------------- | ------------------------------ |
+| **Architecture Overview** | `docs/spec.md`                | Technical specifications       |
 | **Development Roadmap**   | `docs/IMPLEMENTATION_PLAN.md` | Current and future development |
-| **Setup & Usage**         | `README.md`              | User setup and feature guide   |
-| **Testing Framework**     | `tests/README.md`        | Bun test framework details     |
+| **Setup & Usage**         | `README.md`                   | User setup and feature guide   |
+| **Testing Framework**     | `tests/README.md`             | Bun test framework details     |
 | **Manual Testing**        | `docs/DISCORD_TEST_GUIDE.md`  | Discord integration testing    |
 | **Code Analysis**         | `docs/check-similarity.md`    | Duplicate code detection tool  |
 
@@ -145,11 +145,9 @@ const mockFn = mock();
 
 ### **When Using WebFetch Tool**
 
-📚 **For comprehensive API documentation links, see**: `docs/DOCUMENTATION_LINKS.md`
+- Given a URL, USE read_url_content_as_markdown and summary contents
 
-- Discord.js v14: `https://discord.js.org/docs/packages/discord.js/14.19.3`
-- Gemini API: `https://ai.google.dev/gemini-api/docs/function-calling`
-- Brave Search: `https://api-dashboard.search.brave.com/app/documentation/web-search/query`
+📚 **For comprehensive API documentation links, see**: `docs/DOCUMENTATION_LINKS.md`
 
 ### **Environment Variables**
 
